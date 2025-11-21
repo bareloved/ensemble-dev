@@ -1,6 +1,6 @@
 # Post-Deployment Testing Checklist
 
-**Last Updated:** November 17, 2025  
+**Last Updated:** November 21, 2025  
 **Purpose:** Comprehensive checklist of features to test after deploying to production
 
 ---
@@ -8,9 +8,263 @@
 ## 🚀 Before You Start
 
 - [ ] Deployment is complete and live
-- [ ] Environment variables are set correctly
-- [ ] Database migrations have been applied to production
+- [ ] Environment variables are set correctly in Vercel
+- [ ] Database migrations have been applied to production:
+  - [ ] `20251120000003_setup_avatars_storage.sql` (Avatar storage bucket)
+  - [ ] `20251120000004_extract_google_avatar.sql` (Google OAuth avatar extraction)
+  - [ ] `20251120000005_money_view_v1.sql` (Payment status system)
+  - [ ] All other migrations
 - [ ] You have the production URL (e.g., `https://your-app.vercel.app`)
+- [ ] Supabase Storage bucket `avatars` exists and is publicly readable
+- [ ] Supabase RLS policies are enabled
+
+---
+
+## 🎨 Layout & Navigation (Step 29)
+
+### Two-Row Sticky Header
+
+**All pages:**
+
+- [ ] Two-row sticky header is visible at top
+- [ ] Header stays visible when scrolling
+- [ ] Header background has proper blur/transparency effect
+
+### Row 1: Global App Bar
+
+**Navigation:**
+- [ ] Logo displays correctly on left
+- [ ] "Gig Brain" subtitle visible
+- [ ] Nav items visible: Dashboard, Gigs, Money, Calendar, My Circle
+- [ ] "More" dropdown shows: History (and future items)
+- [ ] Active page is highlighted with underline indicator
+- [ ] Clicking nav items navigates correctly
+- [ ] Underline indicator animates smoothly
+
+**Actions (Right Side):**
+- [ ] "+ New Gig" button visible and clickable
+- [ ] Clicking opens CreateGigDialog
+- [ ] Notification bell shows unread count badge
+- [ ] Clicking bell opens notifications dropdown
+- [ ] Dark mode toggle works
+- [ ] User menu dropdown works:
+  - [ ] Shows user avatar and name
+  - [ ] Shows email
+  - [ ] "Profile" link navigates to `/profile`
+  - [ ] "Settings" link navigates to `/settings/calendar`
+  - [ ] "Sign Out" works and redirects
+
+**Mobile Responsive (< 1024px):**
+- [ ] Hamburger menu icon appears on mobile
+- [ ] Clicking hamburger opens side drawer (Sheet)
+- [ ] Side drawer shows all nav items
+- [ ] Side drawer closes after selecting item
+- [ ] Logo remains visible on mobile
+- [ ] Actions remain visible on mobile
+
+### Row 2: Project Bar
+
+**Project Selector:**
+- [ ] "Projects:" label with icon visible
+- [ ] "All Projects" pill shows total gig count
+- [ ] Top 5 projects shown as pills with counts
+- [ ] Clicking project pill filters gigs
+- [ ] Selected project is highlighted (filled style)
+- [ ] "More" dropdown shows additional projects (if > 5)
+- [ ] "View all" link navigates to `/projects`
+- [ ] Project counts update in real-time
+
+**Context Actions:**
+- [ ] Search input visible on larger screens (lg+)
+- [ ] Search input works on relevant pages
+- [ ] Filter button placeholder visible
+
+**Mobile Responsive:**
+- [ ] Project bar scrolls horizontally on mobile
+- [ ] Touch swipe works for scrolling projects
+
+---
+
+## 👤 Profile Avatars (Step 21)
+
+### Avatar Display
+
+**Header / User Menu:**
+- [ ] User avatar displays in top-right user menu button
+- [ ] If no avatar, shows initials (first 2 letters of name)
+- [ ] Avatar is circular
+- [ ] Clicking avatar opens user menu dropdown
+
+**Sidebar / App Header:**
+- [ ] Avatar displays consistently throughout app
+- [ ] Fallback to initials works everywhere
+- [ ] Avatar images load quickly
+- [ ] Broken images fall back to initials gracefully
+
+### Avatar Upload
+
+**Profile Page (`/profile`):**
+
+- [ ] Profile page shows current avatar or initials
+- [ ] "Upload Avatar" button is visible
+- [ ] Clicking button opens file picker
+- [ ] Can select image file (JPEG, PNG, WebP, GIF)
+- [ ] File size validation works (max 5MB)
+- [ ] Shows error for invalid file types
+- [ ] Shows error for oversized files
+- [ ] Upload progress/feedback is shown
+- [ ] Avatar updates immediately after upload
+- [ ] New avatar appears throughout app instantly
+- [ ] Can replace existing avatar
+- [ ] Old avatar is overwritten (not duplicated)
+
+### Google OAuth Avatar Import
+
+**For users who sign up with Google:**
+- [ ] Google profile picture is automatically imported on first signup
+- [ ] Avatar is stored in Supabase Storage `avatars` bucket
+- [ ] Avatar URL is saved to `profiles.avatar_url`
+- [ ] Avatar displays correctly after signup
+- [ ] User can still manually upload different avatar
+
+### Storage & Security
+
+**Supabase Storage (`avatars` bucket):**
+- [ ] Avatars are publicly readable (can view without auth)
+- [ ] Users can only upload to their own folder
+- [ ] Users can only update their own avatar
+- [ ] Users can only delete their own avatar
+- [ ] Cannot access or modify other users' avatars
+- [ ] Path structure: `{user_id}/avatar.{ext}`
+
+---
+
+## 💰 Money View v1 (Step 22)
+
+### Enhanced Payment System
+
+**Migration Applied:**
+- [ ] `payment_status` field exists (replaces old `is_paid` boolean)
+- [ ] Values: 'pending', 'paid', 'partial', 'overdue'
+- [ ] `paid_amount` field exists (for partial payments)
+- [ ] `currency` field exists (defaults to 'ILS')
+
+### My Earnings (Player View)
+
+**URL:** `/money`
+
+**Summary Cards (Top):**
+- [ ] "Unpaid Gross" card shows total unpaid amount
+- [ ] "Paid (All Time)" card shows total lifetime earnings
+- [ ] "This Month" card shows current month earnings
+- [ ] Currency displays correctly (ILS)
+- [ ] Amounts are accurate
+- [ ] Cards update when filters change
+
+**Filters:**
+- [ ] Year dropdown works (shows current and past years)
+- [ ] Month dropdown works (All Months, Jan-Dec)
+- [ ] Status filter works:
+  - [ ] "All" shows everything
+  - [ ] "Paid" shows only paid gigs
+  - [ ] "Unpaid" shows pending/partial/overdue
+- [ ] Table updates immediately when filters change
+- [ ] Summary cards reflect filtered data
+
+**Earnings Table:**
+- [ ] Shows all gigs where user is a player
+- [ ] Columns: Date, Gig, Project, Role, Location, Fee, Status, Actions
+- [ ] Date format is readable
+- [ ] Project name displays correctly
+- [ ] Role name displays correctly
+- [ ] Location shows (or "Not specified")
+- [ ] Fee amount displays with currency
+- [ ] Status badge colors:
+  - [ ] Green for "Paid"
+  - [ ] Yellow/amber for "Partial"
+  - [ ] Gray for "Pending"
+  - [ ] Red for "Overdue"
+- [ ] Payment status badge is readable
+- [ ] "..." menu appears on each row
+- [ ] Clicking "..." shows actions:
+  - [ ] "Mark as Paid" (if not paid)
+  - [ ] "Mark as Unpaid" (if paid)
+  - [ ] Actions disabled if not applicable
+- [ ] Marking as paid/unpaid updates immediately
+- [ ] Toast notification appears on update
+- [ ] Table re-sorts after status change (if sorted by status)
+
+**Empty State:**
+- [ ] Shows "No earnings found" when no gigs
+- [ ] Message changes based on active filters
+
+**Sorting:**
+- [ ] Clicking column headers sorts table
+- [ ] Sort by date (ascending/descending)
+- [ ] Sort by amount
+- [ ] Sort by status
+- [ ] Sort indicator shows current sort
+
+### Payouts (Manager View)
+
+**URL:** `/money` (when user is a manager)
+
+**Tab Toggle:**
+- [ ] Shows tabs: "My Earnings" | "Payouts"
+- [ ] "My Earnings" tab shows player view (above)
+- [ ] "Payouts" tab shows manager view
+
+**Summary Cards (Payouts):**
+- [ ] "Total Unpaid" card shows amount owed to musicians
+- [ ] "Total Paid" card shows amount paid to musicians
+- [ ] "This Month" card shows current month payouts
+- [ ] Amounts update with filters
+
+**Filters (Payouts):**
+- [ ] Year dropdown works
+- [ ] Month dropdown works
+- [ ] Project filter works:
+  - [ ] "All Projects" shows all
+  - [ ] Individual projects filter correctly
+- [ ] Status filter works (All, Paid, Unpaid)
+- [ ] Table and summary update together
+
+**Payouts Table:**
+- [ ] Shows all gig roles for user's managed projects
+- [ ] Columns: Date, Gig, Project, Musician, Role, Fee, Status, Actions
+- [ ] Musician name displays correctly
+- [ ] Can see all musicians user needs to pay
+- [ ] Status badges match player view colors
+- [ ] "..." menu works
+- [ ] Can mark musicians as paid/unpaid
+- [ ] Updates work for any musician in managed projects
+- [ ] Toast notifications work
+
+**Authorization:**
+- [ ] Players can update their own payment status
+- [ ] Managers can update payment status for their projects
+- [ ] Cannot update payment status for other users' gigs
+- [ ] API properly checks authorization
+
+### Payment Status Updates
+
+**Update Dialog (Optional Enhancement):**
+- [ ] Dialog appears when marking as paid (if implemented)
+- [ ] Can enter partial payment amount
+- [ ] Can select payment date
+- [ ] Validation works (amount > 0, date not future)
+- [ ] Save button updates status
+
+**Status Transitions:**
+- [ ] Pending → Paid works
+- [ ] Paid → Unpaid works (reversal)
+- [ ] Partial payment saves amount correctly
+- [ ] Overdue status calculated correctly (if implemented)
+
+**Real-Time Updates:**
+- [ ] Dashboard payment indicators update
+- [ ] Money page updates without refresh
+- [ ] Notifications sent on status change (if implemented)
 
 ---
 
@@ -81,7 +335,7 @@
 **URL:** `/calendar`
 
 - [ ] Page loads without errors
-- [ ] Calendar icon appears in sidebar
+- [ ] Calendar appears in top navigation
 - [ ] Month view displays correctly
 - [ ] Week view displays correctly
 - [ ] Day view displays correctly
@@ -117,7 +371,7 @@
 
 ### 7. Calendar Settings Navigation
 
-- [ ] "Settings" link appears in sidebar
+- [ ] "Settings" link appears in user menu dropdown
 - [ ] Clicking "Settings" navigates to `/settings/calendar`
 - [ ] Back navigation works correctly
 
@@ -162,8 +416,9 @@
 
 - [ ] "..." menu appears on gig cards
 - [ ] **As Player:**
-  - [ ] "Mark as Paid" works (only if unpaid)
-  - [ ] "Mark as Unpaid" works (only if paid)
+  - [ ] "Mark as Paid" works (updates to payment_status: 'paid')
+  - [ ] "Mark as Unpaid" works (updates to payment_status: 'pending')
+  - [ ] Payment status updates reflect new enum system
   - [ ] "Accept Invitation" works (only if invited)
   - [ ] "Decline Invitation" works (only if invited)
   - [ ] Conflict detection triggers when accepting
@@ -173,6 +428,7 @@
   - [ ] "Mark as Completed" works
 - [ ] Toast notifications appear after each action
 - [ ] Dashboard updates immediately after actions
+- [ ] Payment status badge reflects current state accurately
 
 ---
 
@@ -189,18 +445,6 @@
 - [ ] Infinite scroll works
 - [ ] "Load More" button works
 - [ ] View preferences persist
-
----
-
-## 💰 Money Page
-
-**URL:** `/money`
-
-- [ ] Page loads without errors
-- [ ] Shows all gigs with payment info
-- [ ] Filter by payment status works (All | Paid | Unpaid)
-- [ ] Summary stats are accurate
-- [ ] List updates after marking as paid/unpaid
 
 ---
 
@@ -280,9 +524,10 @@
 
 ### Sign Out
 
-- [ ] Sign out button in sidebar footer works
+- [ ] Sign out button in user menu dropdown works
 - [ ] Redirects to sign in page
 - [ ] User is logged out completely
+- [ ] Session is properly cleared
 
 ---
 
@@ -393,8 +638,16 @@
 ### Check Documentation
 
 - [ ] README.md is up-to-date
-- [ ] BUILD_STEPS.md includes Step 15 (Calendar Integration)
-- [ ] `docs/build-process/step-8-calendar-integration-phase-1.md` exists
+- [ ] BUILD_STEPS.md includes latest features:
+  - [ ] Step 15 (Calendar Integration)
+  - [ ] Step 21 (Profile Avatars)
+  - [ ] Step 22 (Money View v1)
+  - [ ] Step 29 (Layout Refactor)
+- [ ] Build process docs exist:
+  - [ ] `docs/build-process/step-8-calendar-integration-phase-1.md`
+  - [ ] `docs/build-process/step-21-profile-avatars.md`
+  - [ ] `docs/build-process/step-22-money-view-v1.md`
+  - [ ] `docs/build-process/step-29-layout-refactor-top-header.md`
 - [ ] `docs/future-enhancements/calendar-integration-roadmap.md` exists
 - [ ] All code has inline comments where needed
 
@@ -436,9 +689,14 @@ Once all items are checked, you're ready to:
 ## 🔗 Related Documentation
 
 - `BUILD_STEPS.md` - Full build history
-- `docs/build-process/step-8-calendar-integration-phase-1.md` - Calendar implementation details
+- `docs/build-process/step-8-calendar-integration-phase-1.md` - Calendar implementation
+- `docs/build-process/step-21-profile-avatars.md` - Avatar system implementation
+- `docs/build-process/step-22-money-view-v1.md` - Payment status system implementation
+- `docs/build-process/step-29-layout-refactor-top-header.md` - Two-row header layout
 - `docs/future-enhancements/calendar-integration-roadmap.md` - Phase 1.5 roadmap
 - `docs/future-enhancements/dashboard-improvements.md` - Dashboard features
+- `VERCEL_DEPLOYMENT_INSTRUCTIONS.md` - Deployment guide
+- `ENVIRONMENT_VARIABLES.md` - Environment variables reference
 
 ---
 
