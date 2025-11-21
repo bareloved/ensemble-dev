@@ -132,7 +132,7 @@ export function ProjectBar() {
                   )}
                   onClick={() => handleProjectChange("all")}
                 >
-                  All Projects
+                  All
                   {gigCounts["all"] !== undefined && (
                     <Badge 
                       variant={currentProjectId === "all" ? "secondary" : "outline"}

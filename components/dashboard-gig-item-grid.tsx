@@ -131,7 +131,7 @@ export function DashboardGigItemGrid({ gig, isPastGig = false, returnUrl = "/das
         {/* Title and Project */}
         <div className="space-y-1">
           <h3 className="font-semibold text-base line-clamp-2">{gig.gigTitle}</h3>
-          {gig.projectName && !gig.projectName.includes("Personal Gigs") && (
+          {gig.projectName && !gig.projectName.includes("My Gigs") && (
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <Music className="h-3.5 w-3.5 flex-shrink-0" />
               <span className="truncate">{gig.projectName}</span>

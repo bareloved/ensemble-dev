@@ -112,7 +112,7 @@ export function DashboardGigItem({ gig, isPastGig = false, returnUrl = "/dashboa
             <div className="flex items-start justify-between gap-2">
               <div className="space-y-1 flex-1 min-w-0">
                 <h3 className="font-semibold truncate">{gig.gigTitle}</h3>
-                {gig.projectName && !gig.projectName.includes("Personal Gigs") && (
+                {gig.projectName && !gig.projectName.includes("My Gigs") && (
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <Music className="h-3.5 w-3.5" />
                     <span>{gig.projectName}</span>

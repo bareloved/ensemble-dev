@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MyEarningsSummary } from '@/lib/types/shared';
+import { formatCurrency } from '@/lib/utils/currency';
 
 export function MyEarningsSummaryCards({ summary }: { summary: MyEarningsSummary }) {
   return (
@@ -14,7 +15,7 @@ export function MyEarningsSummaryCards({ summary }: { summary: MyEarningsSummary
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-orange-600">
-            ₪{(summary.unpaidGross || 0).toFixed(2)}
+            {formatCurrency(summary.unpaidGross || 0)}
           </div>
         </CardContent>
       </Card>
@@ -27,7 +28,7 @@ export function MyEarningsSummaryCards({ summary }: { summary: MyEarningsSummary
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-green-600">
-            ₪{(summary.paidGross || 0).toFixed(2)}
+            {formatCurrency(summary.paidGross || 0)}
           </div>
         </CardContent>
       </Card>
@@ -40,7 +41,7 @@ export function MyEarningsSummaryCards({ summary }: { summary: MyEarningsSummary
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            ₪{(summary.thisMonthGross || 0).toFixed(2)}
+            {formatCurrency(summary.thisMonthGross || 0)}
           </div>
         </CardContent>
       </Card>

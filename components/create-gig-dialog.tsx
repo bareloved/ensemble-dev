@@ -112,12 +112,11 @@ export function CreateGigDialog({
           finalProjectId = existingProject.id;
         } else {
           // Create personal project
-          const userName = user!.user_metadata?.full_name || user!.email?.split('@')[0] || 'User';
           const { data: newProject, error: createError } = await supabase
             .from("projects")
             .insert({
               owner_id: user!.id,
-              name: `${userName}'s Personal Gigs`,
+              name: 'My Gigs',
               description: 'Auto-created personal project for standalone gigs',
               is_personal: true,
             })

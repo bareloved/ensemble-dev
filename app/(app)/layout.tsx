@@ -6,6 +6,7 @@ import { useUser } from "@/lib/providers/user-provider";
 import { useQueryClient } from "@tanstack/react-query";
 import { listUserProjects } from "@/lib/api/projects";
 import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function AppLayout({
   children,
@@ -14,7 +15,18 @@ export default function AppLayout({
 }) {
   const { isLoading: isUserLoading, user } = useUser();
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const pathname = usePathname();
   const [isDataPrefetched, setIsDataPrefetched] = useState(false);
+
+  // Client-side auth check (fallback in case middleware doesn't catch it)
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      // User is not authenticated, redirect to sign-in
+      const redirectUrl = `/auth/sign-in?redirectTo=${encodeURIComponent(pathname)}`;
+      router.push(redirectUrl);
+    }
+  }, [isUserLoading, user, router, pathname]);
 
   // Prefetch projects data once user is loaded
   // Reset when user changes to force re-prefetch

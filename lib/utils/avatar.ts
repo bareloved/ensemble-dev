@@ -40,25 +40,33 @@ export async function uploadAvatar(userId: string, file: File): Promise<string> 
 
   // Get file extension
   const fileExt = file.name.split('.').pop();
-  const fileName = `avatar.${fileExt}`;
+  // Use timestamp in filename to avoid caching issues
+  const fileName = `avatar-${Date.now()}.${fileExt}`;
   const filePath = `${userId}/${fileName}`;
 
-  // Delete old avatar if it exists (to prevent accumulating old files)
+  // Delete old avatars before uploading new one
   try {
-    await deleteAvatar(userId);
+    const { data: existingFiles } = await supabase.storage
+      .from('avatars')
+      .list(userId);
+
+    if (existingFiles && existingFiles.length > 0) {
+      const filesToDelete = existingFiles.map(file => `${userId}/${file.name}`);
+      await supabase.storage
+        .from('avatars')
+        .remove(filesToDelete);
+    }
   } catch (error) {
     // Ignore errors if no old avatar exists
-    if (process.env.NODE_ENV === 'development') {
-      console.log('No old avatar to delete or error deleting:', error);
-    }
+    console.log('No old avatar to delete or error deleting:', error);
   }
 
   // Upload new avatar
   const { error: uploadError } = await supabase.storage
     .from('avatars')
     .upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: true, // Replace if exists
+      cacheControl: '300', // 5 minutes cache
+      upsert: false, // Don't upsert since we're using unique filename
     });
 
   if (uploadError) {

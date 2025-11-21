@@ -31,30 +31,58 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // Get session - only need one call
+  // Get user authentication status
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const isAuthPage = request.nextUrl.pathname.startsWith("/auth");
-  const isRootPath = request.nextUrl.pathname === "/";
+  // Define protected routes that require authentication
+  const protectedRoutes = [
+    '/dashboard',
+    '/gigs',
+    '/money',
+    '/calendar',
+    '/projects',
+    '/profile',
+    '/settings',
+    '/history',
+    '/invitations',
+    '/my-circle',
+  ];
+
+  // Define public routes that don't require auth
+  const publicRoutes = [
+    '/auth/sign-in',
+    '/auth/sign-up',
+    '/auth/callback',
+    '/terms',
+    '/privacy',
+  ];
+
+  const pathname = request.nextUrl.pathname;
+  const isRootPath = pathname === "/";
+  const isAuthPage = pathname.startsWith("/auth");
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
 
   // Handle root path redirect
   if (isRootPath) {
-    if (session) {
+    if (user) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
     return NextResponse.redirect(new URL("/auth/sign-in", request.url));
   }
 
-  // Redirect authenticated users away from auth pages
-  if (session && isAuthPage) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+  // If accessing a protected route without authentication, redirect to sign-in
+  if (isProtectedRoute && !user) {
+    const redirectUrl = new URL('/auth/sign-in', request.url);
+    redirectUrl.searchParams.set('redirectTo', pathname);
+    return NextResponse.redirect(redirectUrl);
   }
 
-  // Redirect unauthenticated users to sign-in (except auth pages)
-  if (!session && !isAuthPage) {
-    return NextResponse.redirect(new URL("/auth/sign-in", request.url));
+  // If accessing auth pages while authenticated, redirect to dashboard
+  if (isAuthPage && user && pathname !== '/auth/callback') {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return response;
@@ -63,14 +91,14 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Only run proxy on:
-     * - Root path (/)
-     * - Auth routes (/auth/*)
-     * - Auth callback
-     * Skip all app routes after initial load (client-side context handles auth)
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (images, etc.)
+     * - api routes (handled separately)
      */
-    "/",
-    "/auth/:path*",
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api/).*)',
   ],
 };
 

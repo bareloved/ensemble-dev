@@ -10,6 +10,7 @@ import { updatePaymentStatus } from '@/lib/api/money';
 import { format } from 'date-fns';
 import { AlertCircle, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/utils/currency';
 
 function getStatusBadge(status: PaymentStatus) {
   switch (status) {
@@ -95,7 +96,7 @@ export function PayoutsTable({ payouts }: { payouts: PayoutRow[] }) {
               <TableCell>{payout.musicianName || '—'}</TableCell>
               <TableCell>{payout.roleName}</TableCell>
               <TableCell className="text-right">
-                {payout.feeAmount ? `₪${payout.feeAmount.toFixed(2)}` : '—'}
+                {payout.feeAmount ? formatCurrency(payout.feeAmount) : '—'}
               </TableCell>
               <TableCell>
                 {payout.paymentStatus === 'overdue' && (
@@ -104,7 +105,7 @@ export function PayoutsTable({ payouts }: { payouts: PayoutRow[] }) {
                 {getStatusBadge(payout.paymentStatus)}
               </TableCell>
               <TableCell>
-                {payout.paidAmount ? `₪${payout.paidAmount.toFixed(2)}` : '—'}
+                {payout.paidAmount ? formatCurrency(payout.paidAmount) : '—'}
               </TableCell>
               <TableCell>
                 {payout.paidDate ? format(new Date(payout.paidDate), 'MMM d, yyyy') : '—'}

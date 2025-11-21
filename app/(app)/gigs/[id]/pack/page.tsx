@@ -108,7 +108,7 @@ export default function GigPackPage() {
             ) : null}
             <GigStatusBadge status={pack.status} />
           </div>
-          {pack.project && !pack.project.name.includes("Personal Gigs") && (
+          {pack.project && !pack.project.name.includes("My Gigs") && (
             <p className="text-sm text-muted-foreground">
               {pack.project.name}
             </p>

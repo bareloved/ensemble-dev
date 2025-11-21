@@ -18,6 +18,7 @@ import { COUNTRY_CODES } from "@/lib/utils/phone";
 import { uploadAvatar, getUserInitials } from "@/lib/utils/avatar";
 import { Camera, Loader2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
+import { useUser } from "@/lib/providers/user-provider";
 
 interface ProfileFormProps {
   profile: {
@@ -34,6 +35,7 @@ interface ProfileFormProps {
 
 export function ProfileForm({ profile, user }: ProfileFormProps) {
   const router = useRouter();
+  const { refetch: refetchUser } = useUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(profile?.name || "");
   const [instrument, setInstrument] = useState(profile?.main_instrument || "");
@@ -54,7 +56,10 @@ export function ProfileForm({ profile, user }: ProfileFormProps) {
     try {
       const publicUrl = await uploadAvatar(user.id, file);
       
-      // Update profile with new avatar URL
+      // Add cache-busting timestamp to force browser to reload image
+      const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
+      
+      // Update profile with new avatar URL (without cache buster in DB)
       const supabase = createClient();
       const { error } = await supabase
         .from("profiles")
@@ -64,8 +69,14 @@ export function ProfileForm({ profile, user }: ProfileFormProps) {
       if (error) {
         setMessage({ type: "error", text: error.message });
       } else {
-        setAvatarUrl(publicUrl);
+        // Update local state with cache-busted URL for immediate display
+        setAvatarUrl(cacheBustedUrl);
         setMessage({ type: "success", text: "Avatar updated successfully!" });
+        
+        // Refetch user data from UserProvider to update avatar everywhere
+        await refetchUser();
+        
+        // Refresh the page to ensure all components update
         router.refresh();
       }
     } catch (error) {
@@ -126,45 +137,29 @@ export function ProfileForm({ profile, user }: ProfileFormProps) {
       {/* Avatar Upload Section */}
       <div className="space-y-2">
         <Label>Profile Picture</Label>
-        <div className="flex items-center gap-4">
-          <Avatar className="h-20 w-20">
+        <div className="relative w-20 h-20">
+          <Avatar 
+            className="h-20 w-20 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => fileInputRef.current?.click()}
+          >
             <AvatarImage src={avatarUrl || undefined} alt={name || "User"} />
             <AvatarFallback className="text-lg">
               {getUserInitials(name)}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-              onChange={handleAvatarChange}
-              className="hidden"
-              disabled={uploadingAvatar}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingAvatar}
-            >
-              {uploadingAvatar ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Camera className="mr-2 h-4 w-4" />
-                  Change Avatar
-                </>
-              )}
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              JPG, PNG, WebP or GIF (max 5MB)
-            </p>
-          </div>
+          {uploadingAvatar && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full h-20 w-20">
+              <Loader2 className="h-6 w-6 text-white animate-spin" />
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+            onChange={handleAvatarChange}
+            className="hidden"
+            disabled={uploadingAvatar}
+          />
         </div>
       </div>
 
