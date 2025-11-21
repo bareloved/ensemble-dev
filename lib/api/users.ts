@@ -6,16 +6,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client';
-
-export interface SystemUser {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  main_instrument: string | null;
-  avatar_url: string | null;
-  created_at: string;
-}
+import type { SystemUser } from '@/lib/types/shared';
 
 /**
  * Search all users in the system

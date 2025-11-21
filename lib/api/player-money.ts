@@ -4,12 +4,16 @@ import type { PlayerMoneySummary, PlayerMoneyGig } from '@/lib/types/shared';
 /**
  * Player Money API
  * Functions for querying financial data for musicians/players
+ * 
+ * @deprecated This module is deprecated. Use lib/api/money.ts instead.
+ * These functions are kept for backward compatibility during transition.
  */
 
 /**
  * Get summary statistics for player money
  * @param userId - The musician's user ID
  * @param dateRange - Optional date range filter { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' }
+ * @deprecated Use getMyEarnings from lib/api/money.ts instead
  */
 export async function getPlayerMoneySummary(
   userId: string,
@@ -19,7 +23,7 @@ export async function getPlayerMoneySummary(
 
   let query = supabase
     .from('gig_roles')
-    .select('agreed_fee, is_paid, gigs!inner(date)')
+    .select('agreed_fee, payment_status, gigs!inner(date)')
     .eq('musician_id', userId)
     .neq('invitation_status', 'pending') // Exclude pending roles (not yet invited)
     .not('agreed_fee', 'is', null);
@@ -54,7 +58,7 @@ export async function getPlayerMoneySummary(
   data.forEach((item: any) => {
     const fee = item.agreed_fee || 0;
 
-    if (item.is_paid) {
+    if (item.payment_status === 'paid') {
       totalEarned += fee;
     } else {
       totalUnpaid += fee;
@@ -74,6 +78,7 @@ export async function getPlayerMoneySummary(
  * @param userId - The musician's user ID
  * @param dateRange - Optional date range filter
  * @param limit - Maximum number of gigs to return (default: 50)
+ * @deprecated Use getMyEarnings from lib/api/money.ts instead
  */
 export async function getPlayerMoneyGigs(
   userId: string,
@@ -89,7 +94,7 @@ export async function getPlayerMoneyGigs(
       id,
       role_name,
       agreed_fee,
-      is_paid,
+      payment_status,
       paid_at,
       gigs!inner(
         id,
@@ -130,7 +135,7 @@ export async function getPlayerMoneyGigs(
       projectName: item.gigs.projects.name,
       roleName: item.role_name,
       agreedFee: item.agreed_fee,
-      isPaid: item.is_paid,
+      isPaid: item.payment_status === 'paid',
       paidAt: item.paid_at,
       currency: 'ILS', // Default to ILS until currency field is added to database
     }))

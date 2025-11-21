@@ -1,0 +1,176 @@
+##
+
+You are the Agent working on my app Gigmaster – a web app to help musicians manage gigs, money, invoices, bands, and calendars.
+
+The app has grown and became noticeably slower after many additions. Your main mission in this session:
+
+Turn the existing app into a much faster, snappier experience WITHOUT breaking existing features.
+
+⸻
+
+0. Project context
+	•	I’m building this in Cursor using Agent Mode.
+	•	Stack (roughly): Next.js/React, TypeScript, Supabase, shadcn/ui + Tailwind, plus the existing project rules & @BUILD_STEPS.md  in this repo.
+	•	I care a lot about UX for non-tech-savvy musicians – things should feel instant and simple.
+	•	A previous version of this app became very slow very quickly, so performance and cleanliness are now first-class priorities, not an afterthought.
+
+Whenever you propose or implement changes, always:
+	1.	Preserve existing behavior and data flow (no breaking changes if possible).
+	2.	Prefer clear, maintainable code over micro-optimizations.
+	3.	Explain what you’re doing in plain language in the plan.
+
+⸻
+
+1. Understand current performance problems
+
+First, scan the project and:
+	•	Identify the main pages / areas:
+	•	Dashboard / Home (gigs overview)
+	•	Gigs list / details
+	•	Calendar / schedule
+	•	Money view (earnings per gig, paid/unpaid, etc.)
+	•	Any global layouts, navbars, or providers
+	•	Based on the current code:
+	•	List where performance is likely bad:
+	•	Heavy data fetching (Supabase queries in components, N+1 patterns, no pagination, etc.)
+	•	Over-rendered components (too many global states, props drilling, context misuse)
+	•	Large lists rendered at once (gigs, money lines) without virtualization or pagination
+	•	Big client bundle (huge libraries loaded on every page, big components in the main layout)
+	•	Unoptimized images / icons / SVGs
+	•	Note any anti-patterns you find (e.g. fetching the same data in multiple places, complex computations in render, etc.)
+
+Deliverable:
+Create a short “Performance Audit” section in a PERFORMANCE_PLAN.md file in the repo, listing:
+	•	Suspicious pages/components
+	•	Likely causes
+	•	Quick notes on why they’re problematic
+
+⸻
+
+2. Measure & set targets
+
+Even if this is approximate, set simple performance goals:
+	•	Target for perceived initial load (time to usable UI)
+	•	Target for key interactions (filtering gigs, navigating to gig details, toggling calendar, switching between views).
+
+In PERFORMANCE_PLAN.md, add a “Targets” section:
+	•	“Initial dashboard usable under X seconds on average hardware”
+	•	“Filter/search results appear within ~200–300ms where possible”
+	•	“Navigation between main pages feels instant, no visible jank”
+
+You don’t have real telemetry, but you can infer from bundle size, fetch patterns and code structure where things will struggle.
+
+⸻
+
+3. Optimize data fetching & Supabase usage
+
+Focus heavily on how we talk to Supabase:
+	•	Look for:
+	•	Queries run inside React components on every render
+	•	Queries without filters, limits, or pagination
+	•	Repeated queries fetching the same data across components
+	•	Refactor toward:
+	•	Fewer, more intentional queries
+	•	Paginated or limited results for big lists (gigs, money view, etc.)
+	•	Shared data hooks where appropriate (to avoid duplicate fetching)
+	•	Clear separation between:
+	•	Server-side / route-level data fetching
+	•	Client-side interaction/update logic
+
+In PERFORMANCE_PLAN.md, add a “Data Fetching Changes” section where you list:
+	•	Which endpoints / Supabase queries you optimized
+	•	What changed (e.g. added pagination, added select fields instead of *, reduced number of queries, etc.)
+	•	Expected impact on performance.
+
+⸻
+
+4. Improve React rendering & state management
+
+Scan the React tree and:
+	•	Find large components that:
+	•	Fetch data, manage complex state, and render big UIs all in one place
+	•	Receive many props and cause child rerenders
+	•	Identify:
+	•	Overused context providers that trigger many rerenders
+	•	State that could be local instead of global
+
+Refactor toward:
+	•	Smaller, focused components
+	•	Avoiding unnecessary rerenders:
+	•	Make sure heavy calculations don’t run on every render
+	•	Only use context where it truly makes sense
+	•	For big lists (gigs, money view, history):
+	•	Use pagination and/or virtualization where appropriate.
+
+Update PERFORMANCE_PLAN.md with a “Rendering & State” section:
+	•	List which components you broke down or adjusted
+	•	Note where you prevented unnecessary rerenders and why it helps.
+
+⸻
+
+5. Bundle size & lazy loading
+
+Investigate how the bundle is built:
+	•	Identify:
+	•	Heavy libraries that are imported at the layout/root level
+	•	Pages that import a lot of UI components, charts, date pickers, etc.
+	•	Refactor where appropriate to:
+	•	Lazy-load non-critical parts (modals, heavy widgets, charts, rarely used screens)
+	•	Avoid putting heavy components in the global layout if they are not needed on every page
+	•	Ensure icons/assets usage is sane (e.g., not loading whole icon packs where a few icons would do)
+
+In PERFORMANCE_PLAN.md, add a “Bundle & Lazy Loading” section:
+	•	List concrete changes:
+	•	What got lazy-loaded
+	•	What big imports were removed or optimized
+	•	Any libraries we might consider replacing with lighter alternatives in the future
+
+⸻
+
+6. UI responsiveness & “snappy” feel
+
+Focus on perceived performance, especially for non-tech musicians:
+	•	For key interactions (filters, toggles, navigation):
+	•	Ensure the UI responds immediately (optimistic updates where safe, loading indicators where necessary)
+	•	Avoid blocking the main thread with heavy work
+	•	Make sure spinners/skeletons are used in a tasteful way so users always feel “the app is doing something”, not frozen.
+	•	Check the dashboard:
+	•	Make sure the first screen a musician sees is lightweight and quick to show useful info (today’s gigs, upcoming gigs, next payment).
+
+Add a “Snappy UX Improvements” section to PERFORMANCE_PLAN.md with:
+	•	Which interactions you improved
+	•	How you improved perceived speed (optimistic UI, skeletons, etc.)
+
+⸻
+
+7. Housekeeping & guardrails
+
+While you’re refactoring:
+	•	Remove obvious performance killers:
+	•	Massive console logging in hot paths
+	•	Debug code running on every render
+	•	Unused components / dead code paths that can be safely deleted
+	•	If there are obvious low-hanging tests or checks that can prevent future perf regressions, add them or at least propose them in PERFORMANCE_PLAN.md.
+
+Add a “Guardrails & Notes” section explaining:
+	•	Coding rules you recommend for future features (e.g., “never fetch unpaginated lists of gigs on the client,” “no Supabase calls inside deeply nested presentational components,” etc.)
+
+⸻
+
+8. Work style & communication
+	1.	First, write or update PERFORMANCE_PLAN.md with:
+	•	Audit
+	•	Targets
+	•	Proposed changes grouped as above
+	2.	Then implement the changes in small, well-scoped commits/steps.
+	3.	Before finishing, update PERFORMANCE_PLAN.md again with:
+	•	What was actually implemented
+	•	What’s left as “Future Work”
+
+When you’re done, give me a short summary in plain language:
+	•	What you improved
+	•	Which parts of the app should now feel faster
+	•	Any trade-offs you made
+	•	Any remaining performance hotspots I should be aware of.
+
+Important: Do not invent new product features in this task. Only refactor and optimize what already exists for speed, smoothness, and maintainability

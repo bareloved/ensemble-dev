@@ -48,6 +48,7 @@ export async function listDashboardGigs(
 
   // Fetch all gigs accessible to the user (RLS handles permissions)
   // The RLS policies allow viewing owned gigs OR gigs with user roles
+  // PERFORMANCE: Limit to reasonable amount, use pagination for more
   const { data: allGigs, error: allGigsError } = await supabase
     .from("gigs")
     .select(`
@@ -72,7 +73,7 @@ export async function listDashboardGigs(
         id,
         role_name,
         invitation_status,
-        is_paid,
+        payment_status,
         musician_id
       )
     `)
@@ -80,7 +81,7 @@ export async function listDashboardGigs(
     .lte("date", toStr)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true })
-    .limit(200);
+    .limit(100);
 
   if (allGigsError) {
     throw new Error(allGigsError.message || "Failed to fetch gigs");
@@ -104,7 +105,7 @@ export async function listDashboardGigs(
 
       let paymentStatus: "paid" | "unpaid" | null = null;
       if (isPlayer && userRole) {
-        paymentStatus = userRole.is_paid ? "paid" : "unpaid";
+        paymentStatus = userRole.payment_status === 'paid' ? "paid" : "unpaid";
       }
 
       // Extract host name from project owner (if gig has a project)
@@ -177,10 +178,12 @@ export async function listDashboardGigs(
 
 /**
  * List recent past gigs for dashboard view
- * Returns last 20 completed gigs from the past 30 days
+ * Returns recent completed gigs from the past 30 days
+ * @param limit - Number of gigs to return (default 5 for performance)
  */
 export async function listRecentPastGigs(
-  userId: string
+  userId: string,
+  limit: number = 5
 ): Promise<DashboardGig[]> {
   const supabase = createClient();
 
@@ -194,6 +197,7 @@ export async function listRecentPastGigs(
   const toStr = yesterday.toISOString().split('T')[0];
 
   // Fetch recent past gigs
+  // PERFORMANCE: Start with small limit, load more on demand
   const { data: allGigs, error: gigsError } = await supabase
     .from("gigs")
     .select(`
@@ -218,7 +222,7 @@ export async function listRecentPastGigs(
         id,
         role_name,
         invitation_status,
-        is_paid,
+        payment_status,
         musician_id
       )
     `)
@@ -226,7 +230,7 @@ export async function listRecentPastGigs(
     .lte("date", toStr)
     .order("date", { ascending: false })
     .order("start_time", { ascending: false })
-    .limit(100);
+    .limit(limit);
 
   if (gigsError) {
     throw new Error(gigsError.message || "Failed to fetch recent past gigs");
@@ -250,7 +254,7 @@ export async function listRecentPastGigs(
 
       let paymentStatus: "paid" | "unpaid" | null = null;
       if (isPlayer && userRole) {
-        paymentStatus = userRole.is_paid ? "paid" : "unpaid";
+        paymentStatus = userRole.payment_status === 'paid' ? "paid" : "unpaid";
       }
 
       // Extract host name from project owner (if gig has a project)
@@ -283,7 +287,7 @@ export async function listRecentPastGigs(
 
   // Convert to array and sort (already sorted by query)
   const results = Array.from(gigMap.values());
-  return results.slice(0, 20);
+  return results.slice(0, limit);
 }
 
 /**
@@ -307,6 +311,7 @@ export async function listAllPastGigs(
   const offset = options?.offset ?? 0;
 
   // Fetch all past gigs
+  // PERFORMANCE: Start with 50, paginate for more (UI controls page size)
   const { data: allGigs, error: gigsError} = await supabase
     .from("gigs")
     .select(`
@@ -331,14 +336,14 @@ export async function listAllPastGigs(
         id,
         role_name,
         invitation_status,
-        is_paid,
+        payment_status,
         musician_id
       )
     `)
     .lt("date", todayStr)
     .order("date", { ascending: false })
     .order("start_time", { ascending: false })
-    .limit(500);
+    .limit(50);
 
   if (gigsError) {
     throw new Error(gigsError.message || "Failed to fetch past gigs");
@@ -362,7 +367,7 @@ export async function listAllPastGigs(
 
       let paymentStatus: "paid" | "unpaid" | null = null;
       if (isPlayer && userRole) {
-        paymentStatus = userRole.is_paid ? "paid" : "unpaid";
+        paymentStatus = userRole.payment_status === 'paid' ? "paid" : "unpaid";
       }
 
       // Extract host name from project owner (if gig has a project)

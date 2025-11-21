@@ -11,11 +11,25 @@ import { GigStatusBadge } from "@/components/gig-status-badge";
 import { ArrowLeft, Plus, Settings, Calendar, MapPin, Clock, Pencil, Trash2 } from "lucide-react";
 import { getProject, deleteProject } from "@/lib/api/projects";
 import { listGigsForProject } from "@/lib/api/gigs";
-import { CreateGigDialog } from "@/components/create-gig-dialog";
-import { EditProjectDialog } from "@/components/edit-project-dialog";
-import { DeleteProjectDialog } from "@/components/delete-project-dialog";
+// PERFORMANCE: Lazy load heavy dialogs - only loads when needed
+import dynamic from "next/dynamic";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/lib/providers/user-provider";
+
+const CreateGigDialog = dynamic(
+  () => import("@/components/create-gig-dialog").then((mod) => ({ default: mod.CreateGigDialog })),
+  { ssr: false, loading: () => null }
+);
+
+const EditProjectDialog = dynamic(
+  () => import("@/components/edit-project-dialog").then((mod) => ({ default: mod.EditProjectDialog })),
+  { ssr: false, loading: () => null }
+);
+
+const DeleteProjectDialog = dynamic(
+  () => import("@/components/delete-project-dialog").then((mod) => ({ default: mod.DeleteProjectDialog })),
+  { ssr: false, loading: () => null }
+);
 
 export default function ProjectDetailPage() {
   const params = useParams();

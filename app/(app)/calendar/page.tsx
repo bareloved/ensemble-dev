@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, momentLocalizer, View } from "react-big-calendar";
-import moment from "moment";
+import { Calendar, dateFnsLocalizer, View } from "react-big-calendar";
+import { format, parse, startOfWeek, getDay } from "date-fns";
+import { enUS } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,18 @@ import { useUser } from "@/lib/providers/user-provider";
 import { useQuery } from "@tanstack/react-query";
 import { listDashboardGigs } from "@/lib/api/dashboard-gigs";
 
-const localizer = momentLocalizer(moment);
+// Configure date-fns localizer for react-big-calendar
+const locales = {
+  'en-US': enUS,
+};
+
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales,
+});
 
 type RoleFilter = "all" | "manager" | "player";
 
@@ -63,6 +75,8 @@ export default function CalendarPage() {
   }, [date, view]);
 
   // Fetch gigs
+  // PERFORMANCE: Reduced limit to 20 for calendar view (instant load)
+  // Calendar typically shows 1-2 weeks at a time, 20 gigs is plenty
   const { data, isLoading } = useQuery({
     queryKey: ["calendar-gigs", user?.id, dateRange.from, dateRange.to],
     queryFn: async () => {
@@ -71,7 +85,7 @@ export default function CalendarPage() {
       const result = await listDashboardGigs(user.id, {
         from: dateRange.from,
         to: dateRange.to,
-        limit: 500,
+        limit: 20,
         offset: 0,
       });
       return result.gigs;

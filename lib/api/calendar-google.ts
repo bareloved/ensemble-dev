@@ -42,7 +42,7 @@ export async function getCalendarConnection(userId: string): Promise<{
   return {
     id: data.id,
     provider: data.provider,
-    syncEnabled: data.sync_enabled,
+    syncEnabled: data.sync_enabled ?? false,
     lastSyncedAt: data.last_synced_at,
   };
 }
@@ -75,7 +75,9 @@ export async function fetchGoogleCalendarEvents(
   const supabase = await createClient();
 
   // Get connection
-  console.log("[Fetch Events] Looking for connection for user:", userId);
+  if (process.env.NODE_ENV === 'development') {
+    console.log("[Fetch Events] Looking for connection for user:", userId);
+  }
   const { data: connection, error: connError } = await supabase
     .from("calendar_connections")
     .select("access_token, refresh_token, token_expires_at")
@@ -98,7 +100,9 @@ export async function fetchGoogleCalendarEvents(
     throw new Error("Calendar not connected");
   }
 
-  console.log("[Fetch Events] Connection found, token expires:", connection.token_expires_at);
+  if (process.env.NODE_ENV === 'development') {
+    console.log("[Fetch Events] Connection found, token expires:", connection.token_expires_at);
+  }
 
   // Check if token expired
   const expiresAt = new Date(connection.token_expires_at);

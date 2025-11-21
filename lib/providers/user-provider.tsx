@@ -3,17 +3,7 @@
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
-
-type Profile = {
-  id: string;
-  name: string | null;
-  main_instrument: string | null;
-  email: string | null;
-  phone: string | null;
-  default_country_code: string | null;
-  created_at: string;
-  updated_at: string;
-};
+import type { Profile } from "@/lib/types/shared";
 
 type UserContextType = {
   user: User | null;

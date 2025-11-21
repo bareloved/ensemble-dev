@@ -84,7 +84,9 @@ export function NotificationItem({ notification, onClose }: NotificationItemProp
           <p className="text-sm text-muted-foreground">{notification.message}</p>
         )}
         <p className="text-xs text-muted-foreground">
-          {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+          {notification.created_at 
+            ? formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })
+            : 'Just now'}
         </p>
       </div>
       <Button

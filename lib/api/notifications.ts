@@ -93,6 +93,20 @@ export async function deleteNotification(notificationId: string): Promise<void> 
 }
 
 /**
+ * Clear all notifications for a user
+ */
+export async function clearAllNotifications(userId: string): Promise<void> {
+  const supabase = createClient();
+  
+  const { error } = await supabase
+    .from('notifications')
+    .delete()
+    .eq('user_id', userId);
+  
+  if (error) throw error;
+}
+
+/**
  * Create a notification
  * Used by other API functions to trigger notifications
  * 

@@ -97,7 +97,7 @@ export async function getGigPack(
   // Note: RLS will prevent access if role is pending, but we filter here too for clarity
   const { data: userRole, error: userRoleError } = await supabase
     .from('gig_roles')
-    .select('id, role_name, invitation_status, agreed_fee, is_paid, paid_at, notes, player_notes')
+    .select('id, role_name, invitation_status, agreed_fee, payment_status, paid_at, notes, player_notes')
     .eq('gig_id', gigId)
     .eq('musician_id', userId)
     .neq('invitation_status', 'pending') // Don't show role details for pending invitations
@@ -144,7 +144,7 @@ export async function getGigPack(
           roleName: userRole.role_name,
           invitationStatus: userRole.invitation_status,
           agreedFee: userRole.agreed_fee,
-          isPaid: userRole.is_paid,
+          isPaid: userRole.payment_status === 'paid',
           paidAt: userRole.paid_at,
           currency: 'ILS', // Default to ILS until currency field is added to database
           notes: userRole.notes,

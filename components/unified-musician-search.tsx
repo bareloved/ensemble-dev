@@ -138,7 +138,7 @@ export function UnifiedMusicianSearch({
                               <span>{formatCurrency(contact.default_fee, 'ILS')}</span>
                             </>
                           )}
-                          {contact.times_worked_together > 0 && (
+                          {contact.times_worked_together && contact.times_worked_together > 0 && (
                             <>
                               <span>•</span>
                               <span>{contact.times_worked_together}x</span>
@@ -166,7 +166,7 @@ export function UnifiedMusicianSearch({
                       key={systemUser.id}
                       value={systemUser.id}
                       onSelect={() => {
-                        onAddSystemUser(systemUser.id, systemUser.name, systemUser.main_instrument);
+                        onAddSystemUser(systemUser.id, systemUser.name || 'Unknown', systemUser.main_instrument);
                         setOpen(false);
                         setSearchValue("");
                       }}
@@ -175,11 +175,11 @@ export function UnifiedMusicianSearch({
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={systemUser.avatar_url || undefined} />
                         <AvatarFallback>
-                          {systemUser.name.substring(0, 2).toUpperCase()}
+                          {systemUser.name ? systemUser.name.substring(0, 2).toUpperCase() : '??'}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{systemUser.name}</p>
+                        <p className="font-medium truncate">{systemUser.name || 'Unknown'}</p>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           {systemUser.main_instrument && (
                             <span>{systemUser.main_instrument}</span>

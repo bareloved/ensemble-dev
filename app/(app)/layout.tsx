@@ -1,8 +1,7 @@
 "use client";
 
-import { AppSidebar } from "@/components/app-sidebar";
-import { AppHeader } from "@/components/app-header";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { TopNav } from "@/components/top-nav";
+import { ProjectBar } from "@/components/project-bar";
 import { useUser } from "@/lib/providers/user-provider";
 import { useQueryClient } from "@tanstack/react-query";
 import { listUserProjects } from "@/lib/api/projects";
@@ -76,14 +75,17 @@ export default function AppLayout({
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <AppHeader />
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="min-h-screen bg-background">
+      {/* Row 1 - Global App Bar */}
+      <TopNav />
+      
+      {/* Row 2 - Context / Projects Bar */}
+      <ProjectBar />
+      
+      {/* Main Content Area */}
+      <main className="container mx-auto p-6 max-w-7xl">
+        {children}
+      </main>
+    </div>
   );
 }

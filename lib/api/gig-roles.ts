@@ -100,7 +100,7 @@ export async function updateRole(roleId: string, data: GigRoleUpdate): Promise<G
   const { data: currentRole } = await supabase
     .from("gig_roles")
     .select(`
-      is_paid,
+      payment_status,
       musician_id,
       role_name,
       gigs!inner (
@@ -121,7 +121,7 @@ export async function updateRole(roleId: string, data: GigRoleUpdate): Promise<G
   if (error) throw new Error(error.message || "Failed to update role");
   
   // If payment status changed from unpaid to paid, notify the musician
-  if (currentRole && data.is_paid && !currentRole.is_paid && currentRole.musician_id) {
+  if (currentRole && data.payment_status === 'paid' && currentRole.payment_status !== 'paid' && currentRole.musician_id) {
     const gig = currentRole.gigs as any;
     
     await createNotification({
@@ -379,15 +379,21 @@ export async function getMyPendingInvitations(
     `)
     .eq('musician_id', userId)
     .eq('invitation_status', 'invited')
-    .gte('gigs.date', new Date().toISOString().split('T')[0])
-    .order('gigs.date', { ascending: true });
+    .gte('gigs.date', new Date().toISOString().split('T')[0]);
     
   if (error) {
     console.error('Error fetching pending invitations:', error);
     throw new Error('Failed to fetch pending invitations');
   }
   
-  return data as GigRole[];
+  // Sort by date ascending (soonest first) in JavaScript
+  const sorted = (data || []).sort((a: any, b: any) => {
+    const dateA = a.gigs?.date || '';
+    const dateB = b.gigs?.date || '';
+    return dateA.localeCompare(dateB);
+  });
+  
+  return sorted as GigRole[];
 }
 
 /**
@@ -500,7 +506,7 @@ export async function addSystemUserToGig(data: {
       role_name: data.roleName,
       agreed_fee: data.agreedFee,
       invitation_status: 'pending', // Manager must click "Invite All" to send invitations
-      is_paid: false,
+      payment_status: 'pending',
     })
     .select()
     .single();

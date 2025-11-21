@@ -17,16 +17,16 @@ import {
 import { Calendar, MapPin, Package, Users, Briefcase, Music, MoreVertical, DollarSign, Check, X, User, Crown, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/lib/providers/user-provider";
 import type { DashboardGig } from "@/lib/types/shared";
+// PERFORMANCE: Use optimistic update hooks for instant UI feedback
 import {
-  markAsPaid,
-  markAsUnpaid,
-  acceptInvitation,
-  declineInvitation,
-  updateGigStatus,
-} from "@/lib/api/gig-actions";
+  useMarkAsPaid,
+  useMarkAsUnpaid,
+  useAcceptInvitation,
+  useDeclineInvitation,
+  useUpdateGigStatus,
+} from "@/hooks/use-gig-mutations";
 import { checkGigConflicts } from "@/lib/api/calendar";
 import { ConflictWarningDialog } from "@/components/conflict-warning-dialog";
 
@@ -38,7 +38,6 @@ interface DashboardGigItemProps {
 
 export function DashboardGigItem({ gig, isPastGig = false, returnUrl = "/dashboard" }: DashboardGigItemProps) {
   const { user } = useUser();
-  const queryClient = useQueryClient();
   const gigDate = new Date(gig.date);
   const formattedDate = format(gigDate, "EEE, MMM d, yyyy");
   
@@ -46,85 +45,12 @@ export function DashboardGigItem({ gig, isPastGig = false, returnUrl = "/dashboa
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [conflicts, setConflicts] = useState<DashboardGig[]>([]);
 
-  // Mutations for quick actions
-  const markPaidMutation = useMutation({
-    mutationFn: () => markAsPaid(gig.playerGigRoleId!),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ["dashboard-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["recent-past-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["all-past-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["gig"],
-        refetchType: 'active'
-      });
-      toast.success("Marked as paid");
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to mark as paid: ${error.message}`);
-    },
-  });
-
-  const markUnpaidMutation = useMutation({
-    mutationFn: () => markAsUnpaid(gig.playerGigRoleId!),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ["dashboard-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["recent-past-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["all-past-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["gig"],
-        refetchType: 'active'
-      });
-      toast.success("Marked as unpaid");
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to mark as unpaid: ${error.message}`);
-    },
-  });
-
-  const acceptInvitationMutation = useMutation({
-    mutationFn: () => acceptInvitation(gig.playerGigRoleId!),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ["dashboard-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["recent-past-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["all-past-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["gig"],
-        refetchType: 'active'
-      });
-      setShowConflictDialog(false);
-      toast.success("Invitation accepted");
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to accept invitation: ${error.message}`);
-    },
-  });
+  // PERFORMANCE: Use optimistic update hooks for instant UI feedback
+  const markPaidMutation = useMarkAsPaid();
+  const markUnpaidMutation = useMarkAsUnpaid();
+  const acceptInvitationMutation = useAcceptInvitation();
+  const declineInvitationMutation = useDeclineInvitation();
+  const updateStatusMutation = useUpdateGigStatus();
 
   // Handle accept invitation with conflict check
   const handleAcceptInvitation = async () => {
@@ -144,8 +70,8 @@ export function DashboardGigItem({ gig, isPastGig = false, returnUrl = "/dashboa
         setConflicts(conflictingGigs);
         setShowConflictDialog(true);
       } else {
-        // No conflicts, accept directly
-        acceptInvitationMutation.mutate();
+        // No conflicts, accept directly with optimistic update
+        acceptInvitationMutation.mutate(gig.playerGigRoleId!);
       }
     } catch (error) {
       console.error("Error checking conflicts:", error);
@@ -155,60 +81,9 @@ export function DashboardGigItem({ gig, isPastGig = false, returnUrl = "/dashboa
 
   // Handle accept anyway (user confirms despite conflicts)
   const handleAcceptAnyway = () => {
-    acceptInvitationMutation.mutate();
+    setShowConflictDialog(false);
+    acceptInvitationMutation.mutate(gig.playerGigRoleId!);
   };
-
-  const declineInvitationMutation = useMutation({
-    mutationFn: () => declineInvitation(gig.playerGigRoleId!),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ["dashboard-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["recent-past-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["all-past-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["gig"],
-        refetchType: 'active'
-      });
-      toast.success("Invitation declined");
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to decline invitation: ${error.message}`);
-    },
-  });
-
-  const updateStatusMutation = useMutation({
-    mutationFn: (status: "draft" | "confirmed" | "cancelled" | "completed") => updateGigStatus(gig.gigId, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ["dashboard-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["recent-past-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["all-past-gigs", user?.id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ["gig"],
-        refetchType: 'active'
-      });
-      toast.success("Gig status updated");
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to update status: ${error.message}`);
-    },
-  });
 
   // Determine which actions to show
   const showPlayerActions = gig.isPlayer && gig.playerGigRoleId;
@@ -307,16 +182,15 @@ export function DashboardGigItem({ gig, isPastGig = false, returnUrl = "/dashboa
 
               {/* Role Perspective Chips */}
               {gig.isManager && gig.isPlayer && (
-                <Badge variant="outline" className="gap-1.5">
-                  <Briefcase className="h-3 w-3" />
-                  Managing • {gig.playerRoleName}
-                </Badge>
+                <div className="flex items-center gap-1.5">
+                  <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Badge variant="outline" className="capitalize">
+                    {gig.playerRoleName}
+                  </Badge>
+                </div>
               )}
               {gig.isManager && !gig.isPlayer && (
-                <Badge variant="outline" className="gap-1.5">
-                  <Briefcase className="h-3 w-3" />
-                  Managing
-                </Badge>
+                <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
               )}
               {!gig.isManager && gig.isPlayer && gig.playerRoleName && (
                 <Badge variant="outline" className="capitalize">
@@ -378,13 +252,13 @@ export function DashboardGigItem({ gig, isPastGig = false, returnUrl = "/dashboa
                   {showPaymentActions && (
                     <>
                       {gig.paymentStatus === "unpaid" && (
-                        <DropdownMenuItem onClick={() => markPaidMutation.mutate()}>
+                        <DropdownMenuItem onClick={() => markPaidMutation.mutate(gig.playerGigRoleId!)}>
                           <Check className="h-4 w-4 mr-2" />
                           Mark as Paid
                         </DropdownMenuItem>
                       )}
                       {gig.paymentStatus === "paid" && (
-                        <DropdownMenuItem onClick={() => markUnpaidMutation.mutate()}>
+                        <DropdownMenuItem onClick={() => markUnpaidMutation.mutate(gig.playerGigRoleId!)}>
                           <X className="h-4 w-4 mr-2" />
                           Mark as Unpaid
                         </DropdownMenuItem>
@@ -398,7 +272,7 @@ export function DashboardGigItem({ gig, isPastGig = false, returnUrl = "/dashboa
                         <Check className="h-4 w-4 mr-2 text-green-600" />
                         Accept Invitation
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => declineInvitationMutation.mutate()}>
+                      <DropdownMenuItem onClick={() => declineInvitationMutation.mutate(gig.playerGigRoleId!)}>
                         <X className="h-4 w-4 mr-2 text-red-600" />
                         Decline Invitation
                       </DropdownMenuItem>
@@ -412,17 +286,17 @@ export function DashboardGigItem({ gig, isPastGig = false, returnUrl = "/dashboa
                   {showManagerActions && (
                     <>
                       {gig.status !== "confirmed" && (
-                        <DropdownMenuItem onClick={() => updateStatusMutation.mutate("confirmed")}>
+                        <DropdownMenuItem onClick={() => updateStatusMutation.mutate({ gigId: gig.gigId, status: "confirmed" })}>
                           Confirm Gig
                         </DropdownMenuItem>
                       )}
                       {gig.status !== "cancelled" && (
-                        <DropdownMenuItem onClick={() => updateStatusMutation.mutate("cancelled")}>
+                        <DropdownMenuItem onClick={() => updateStatusMutation.mutate({ gigId: gig.gigId, status: "cancelled" })}>
                           Cancel Gig
                         </DropdownMenuItem>
                       )}
                       {gig.status !== "completed" && (
-                        <DropdownMenuItem onClick={() => updateStatusMutation.mutate("completed")}>
+                        <DropdownMenuItem onClick={() => updateStatusMutation.mutate({ gigId: gig.gigId, status: "completed" })}>
                           Mark as Completed
                         </DropdownMenuItem>
                       )}

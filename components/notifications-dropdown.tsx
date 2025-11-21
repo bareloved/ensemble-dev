@@ -8,6 +8,7 @@ import {
   getMyNotifications,
   getUnreadCount,
   markAllAsRead,
+  clearAllNotifications,
   subscribeToNotifications,
 } from "@/lib/api/notifications";
 import {
@@ -45,6 +46,21 @@ export function NotificationsDropdown() {
   // Mark all as read mutation
   const markAllMutation = useMutation({
     mutationFn: () => markAllAsRead(user!.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ["notifications", user?.id],
+        refetchType: 'active'
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ["notifications-unread-count", user?.id],
+        refetchType: 'active'
+      });
+    },
+  });
+
+  // Clear all notifications mutation
+  const clearAllMutation = useMutation({
+    mutationFn: () => clearAllNotifications(user!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ 
         queryKey: ["notifications", user?.id],
@@ -97,15 +113,27 @@ export function NotificationsDropdown() {
       <DropdownMenuContent align="end" className="w-80">
         <div className="flex items-center justify-between p-4">
           <h3 className="font-semibold">Notifications</h3>
-          {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => markAllMutation.mutate()}
-            >
-              Mark all read
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => markAllMutation.mutate()}
+              >
+                Mark all read
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => clearAllMutation.mutate()}
+                disabled={clearAllMutation.isPending}
+              >
+                Clear all
+              </Button>
+            )}
+          </div>
         </div>
         <Separator />
         <ScrollArea className="h-96">

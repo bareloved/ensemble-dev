@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
         id,
         role_name,
         invitation_status,
-        is_paid,
+        payment_status,
         gigs!gig_roles_gig_id_fkey(
           id,
           project_id,

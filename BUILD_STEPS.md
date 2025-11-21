@@ -2060,3 +2060,308 @@ addSystemUserToGig({
 **Step 20 is COMPLETE! One search field to rule them all. 🔍**
 
 Full documentation: [step-20-unified-user-search.md](docs/build-process/step-20-unified-user-search.md)
+
+---
+
+## Step 21: Profile Avatar Pictures ✅
+
+**Date:** November 20, 2025  
+**Status:** Complete  
+**Priority:** Medium
+
+### What Was Built
+
+Implemented profile avatar pictures with upload functionality and automatic extraction from Google OAuth:
+
+1. **Supabase Storage Setup**
+   - Created `avatars` storage bucket with proper policies
+   - Public read access (avatars visible to all)
+   - Authenticated upload/update/delete (users can only modify their own)
+   - 5MB file size limit
+   - Allowed types: JPEG, PNG, WebP, GIF
+
+2. **Google OAuth Avatar Extraction**
+   - Updated `handle_new_user()` trigger function
+   - Automatically extracts Google profile picture on signup
+   - No user action required - works seamlessly
+
+3. **Avatar Upload Functionality**
+   - Added avatar upload UI to profile page
+   - File picker with client-side validation
+   - Upload progress indicator
+   - Automatic cleanup of old avatars
+   - Success/error messages
+
+4. **Display Avatars Throughout App**
+   - App sidebar (user menu)
+   - App header (clickable, links to profile)
+   - Profile form (preview while editing)
+   - Unified search (already had support)
+   - Proper fallbacks (user initials when no avatar)
+
+### Files Created
+
+```
+lib/utils/avatar.ts                                            # Avatar utilities
+supabase/migrations/20251120000003_setup_avatars_storage.sql  # Storage bucket
+supabase/migrations/20251120000004_extract_google_avatar.sql  # OAuth extraction
+docs/build-process/step-21-profile-avatars.md                 # Documentation
+```
+
+### Files Modified
+
+```
+components/profile-form.tsx         # Avatar upload UI
+components/app-sidebar.tsx          # Display avatar in sidebar
+components/app-header.tsx           # Display avatar in header
+```
+
+### Key Features
+
+✅ Upload avatars (JPG, PNG, WebP, GIF)  
+✅ 5MB file size limit with validation  
+✅ File type validation  
+✅ Google OAuth users get profile picture automatically  
+✅ Display in sidebar and header  
+✅ Fallback to user initials  
+✅ Secure storage policies  
+✅ Public read access for avatars  
+✅ Old avatar cleanup on new upload  
+
+### Testing Required
+
+**IMPORTANT:** You need to apply the migrations first:
+
+```bash
+# Option 1: Via Supabase Dashboard (recommended)
+# 1. Go to SQL Editor
+# 2. Run 20251120000003_setup_avatars_storage.sql
+# 3. Run 20251120000004_extract_google_avatar.sql
+
+# Option 2: Via CLI (if local dev)
+supabase db push
+```
+
+**Then test:**
+- [ ] Storage bucket exists in Supabase
+- [ ] Upload avatar from profile page
+- [ ] Avatar displays in sidebar
+- [ ] Avatar displays in header
+- [ ] Click header avatar → goes to profile
+- [ ] Sign up with Google OAuth → gets Google picture
+- [ ] File validation works (reject PDF, 10MB file)
+- [ ] Fallback shows initials when no avatar
+
+### Future Enhancements
+
+1. **Image Cropping:** Add cropper before upload
+2. **Automatic Resize:** Resize to 512x512 to save storage
+3. **Remove Avatar:** Option to delete avatar (not just replace)
+4. **Drag-and-Drop:** Drag image onto avatar to upload
+5. **Avatar Gallery:** Predefined avatars to choose from
+
+---
+
+**Step 21 is COMPLETE! Users can now upload profile pictures! 📸**
+
+Full documentation: [step-21-profile-avatars.md](docs/build-process/step-21-profile-avatars.md)
+
+---
+
+## Step 22: Money View v1 – Complete Earnings & Payouts System ✅ 🟡
+
+**Date:** November 20, 2024  
+**Status:** Core Complete (marked "In Progress" for UX refinements)  
+**Priority:** Critical High
+
+### What Was Built
+
+Implemented comprehensive Money View v1 with two perspectives for tracking payments:
+
+1. **My Earnings (Player View)**
+   - Track income from all gigs
+   - Year/month filtering with quick actions ("This Month", "This Year")
+   - **3 summary cards:** Unpaid, Paid, This Month
+   - Detailed table with payment status
+   - **Simple one-click "Paid" button** for marking payments
+   - **Clickable gig names** to navigate to detail page
+   - Visual highlighting for overdue payments
+   - Proper back navigation from gig detail
+
+2. **Payouts (Manager View)**
+   - Track who needs to be paid
+   - Filter by year, month, project, and status
+   - Table of all musicians across managed gigs
+   - **Same simplified "Paid" button** as player view
+   - **Clickable gig names** for quick access
+   - Only visible for users managing projects
+
+### Schema Changes
+
+**Migration:** `20251120000005_money_view_v1.sql`
+
+**Breaking Change:** Replaced boolean `is_paid` with enum `payment_status`
+
+**New Fields:**
+- `payment_status` TEXT ('pending', 'paid', 'partial', 'overdue')
+- `paid_amount` NUMERIC(10, 2) - For partial payments
+- `currency` TEXT DEFAULT 'ILS' - Future multi-currency support
+
+**Indexes:**
+- `idx_gig_roles_payment_status`
+- `idx_gig_roles_musician_payment`
+
+### Files Created
+
+**API:**
+- `lib/api/money.ts` - Core money functions
+  - `getMyEarnings(year, month?)` - Player earnings with summary
+  - `getPayouts(year, month?, projectId?, statusFilter?)` - Manager payouts
+  - `updatePaymentStatus(update)` - Update payment (auth checked)
+  - `checkIsManager(userId)` - Check manager status
+
+**Components:**
+- `components/update-payment-status-dialog.tsx` - Payment status modal
+- `components/my-earnings-summary.tsx` - Summary cards (4 KPIs)
+- `components/my-earnings-table.tsx` - Earnings table
+- `components/payouts-table.tsx` - Payouts table
+
+**Pages:**
+- `app/(app)/money/page.tsx` - Complete replacement with tabs
+
+**Types:**
+- Added to `lib/types/shared.ts`:
+  - `PaymentStatus` enum
+  - `MyEarningsGig`, `MyEarningsSummary`
+  - `PayoutRow`, `PaymentStatusUpdate`
+
+### Files Modified
+
+- `lib/types/database.ts` - Updated gig_roles types
+- `lib/api/gig-roles.ts` - Replaced is_paid with payment_status
+- `lib/api/player-money.ts` - Marked deprecated
+
+### Key Features
+
+✅ **Dual Perspectives:**
+- Player view: "My Earnings" (all users)
+- Manager view: "Payouts" (conditional visibility)
+
+✅ **Filtering:**
+- Year selector (current + 2 years back)
+- Month selector (all year + 12 months)
+- Quick actions: "This Month", "This Year"
+- Manager: Additional project and status filters
+
+✅ **Payment States:**
+- Pending (default)
+- Paid (with paid amount and date)
+- Partial (with partial amount and date)
+- Overdue (manual marking, visual highlight)
+
+✅ **Summary Statistics:**
+- This Month (Gross)
+- This Year (Gross)
+- Unpaid (Gross) - Orange
+- Overdue (Gross) - Red
+
+✅ **Authorization:**
+- Musicians can update their own payment status
+- Managers can update payment status for their gigs
+- Both checked at API layer
+- RLS policies enforce data isolation
+
+### Performance Optimizations
+
+- ✅ Database indexes on payment fields
+- ✅ Single query returns gigs + summary
+- ✅ Date range filtering at DB level
+- ✅ TanStack Query caching (2-min stale time)
+- ✅ Proper cache keys with user?.id
+- ✅ Loading skeletons and error states
+
+### Testing Required
+
+**IMPORTANT:** Apply migration first via Supabase Dashboard!
+
+**Database:**
+- [ ] Apply migration `20251120000005_money_view_v1.sql`
+- [ ] Verify is_paid dropped, new columns added
+- [ ] Verify constraints and indexes created
+
+**Functionality:**
+- [ ] Test My Earnings year/month filtering
+- [ ] Test summary calculations
+- [ ] Test update payment status (player)
+- [ ] Test Manager tab visibility
+- [ ] Test Payouts filtering
+- [ ] Test update payment status (manager)
+- [ ] Test authorization (musician can't update others)
+
+**UI:**
+- [ ] Test overdue row highlighting
+- [ ] Test quick actions ("This Month", "This Year")
+- [ ] Test modal opens and saves
+- [ ] Test loading states
+- [ ] Test empty states
+- [ ] Test mobile responsive
+
+### Known Limitations
+
+1. **Single Currency:** ILS only (field ready for future)
+2. **Manual Overdue:** No automatic detection
+3. **No Notifications:** Status changes don't notify yet
+4. **No Bulk Actions:** One at a time updates
+5. **No Export:** Can't export to CSV/PDF
+6. **No Client Money:** Musician payments only (no revenue tracking)
+
+### Future Enhancements
+
+**Phase 2 - Manager Money:**
+- Client fees tracking
+- Profit calculations
+- Revenue reports
+
+**Phase 3 - Advanced Features:**
+- Bulk updates
+- CSV/PDF export
+- Payment reminders
+- Auto overdue detection
+- Multi-currency
+
+**Phase 4 - Integrations:**
+- Accounting software (QuickBooks, Xero)
+- Payment processors (PayPal, Stripe)
+- Invoice generation
+
+### UX Improvements & Bug Fixes
+
+**Actions Simplified:**
+- Removed "View Gig" and complex "Update" dialog
+- Single green "Paid" button with check icon
+- One-click payment marking with auto-filled values
+- Button only shows for unpaid gigs
+
+**Navigation Enhanced:**
+- Gig titles are clickable (navigate to detail page)
+- Proper back navigation maintains context
+- Added `?from=money` URL parameter
+
+**Summary Cards:**
+- Reduced from 4 to 3 focused KPIs
+- Clear color coding (orange=unpaid, green=paid)
+
+**Critical Fixes:**
+- ✅ Fixed date range calculation for all month lengths
+- ✅ Fixed PostgREST nested column ordering
+- ✅ Replaced all `is_paid` references with `payment_status` (15+ files)
+- ✅ Fixed cache invalidation for immediate KPI updates
+- ✅ Added safe fallbacks to prevent crashes
+
+---
+
+**Step 22 Core is COMPLETE! Professional payment tracking for musicians and managers. 💰**
+
+*Marked "In Progress" in UI for ongoing refinements and future enhancements.*
+
+Full documentation: [step-22-money-view-v1.md](docs/build-process/step-22-money-view-v1.md)

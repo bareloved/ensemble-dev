@@ -24,14 +24,24 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Music, Briefcase, Calendar, Grid3x3, List, CalendarDays, Search, X, History, ChevronDown, ChevronUp, ArrowRight, SlidersHorizontal, Plus } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listDashboardGigs, listRecentPastGigs, type DashboardGig } from "@/lib/api/dashboard-gigs";
 import { DashboardGigItem } from "@/components/dashboard-gig-item";
 import { DashboardGigItemGrid } from "@/components/dashboard-gig-item-grid";
+import { DashboardGigListSkeleton, DashboardGigGridListSkeleton } from "@/components/dashboard-gig-skeleton";
 import { useUser } from "@/lib/providers/user-provider";
-import { CreateGigDialog } from "@/components/create-gig-dialog";
+// PERFORMANCE: Lazy load heavy dialog - only loads when user clicks "Create Gig"
+import dynamic from "next/dynamic";
 import { useState, useMemo, useRef, useEffect } from "react";
+
+const CreateGigDialog = dynamic(
+  () => import("@/components/create-gig-dialog").then((mod) => ({ default: mod.CreateGigDialog })),
+  { 
+    ssr: false,
+    loading: () => null // No loading state needed, dialog appears on demand
+  }
+);
 import { 
   parseISO,
   format as formatDate,
@@ -120,6 +130,10 @@ export default function DashboardPage() {
   const { user } = useUser();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  
+  // Get project filter from URL params (set by ProjectBar)
+  const projectFilter = searchParams.get("project") || "all";
   
   // Load preferences from localStorage on mount
   const savedPrefs = loadPreferences();
@@ -165,19 +179,24 @@ export default function DashboardPage() {
   // Create gig dialog
   const [createGigDialogOpen, setCreateGigDialogOpen] = useState(false);
   
-  // Save preferences to localStorage when they change
+  // Save preferences to localStorage when they change (debounced)
   useEffect(() => {
-    savePreferences({
-      todayViewMode,
-      upcomingViewMode,
-      roleFilter,
-      sortBy,
-      sortOrder,
-      showRecentGigs,
-      dateRangePreset,
-      dateRangeFrom: dateRange.from.toISOString(),
-      dateRangeTo: dateRange.to.toISOString(),
-    });
+    // Debounce localStorage writes to avoid excessive saves
+    const timeoutId = setTimeout(() => {
+      savePreferences({
+        todayViewMode,
+        upcomingViewMode,
+        roleFilter,
+        sortBy,
+        sortOrder,
+        showRecentGigs,
+        dateRangePreset,
+        dateRangeFrom: dateRange.from.toISOString(),
+        dateRangeTo: dateRange.to.toISOString(),
+      });
+    }, 500); // Wait 500ms after last change
+
+    return () => clearTimeout(timeoutId);
   }, [todayViewMode, upcomingViewMode, roleFilter, sortBy, sortOrder, showRecentGigs, dateRangePreset, dateRange]);
   
   // Debounce search input (300ms)
@@ -190,6 +209,8 @@ export default function DashboardPage() {
   }, [searchQuery]);
 
   // Fetch unified gigs list with date range and pagination
+  // PERFORMANCE: Start with just 10 gigs for instant load
+  const PAGE_SIZE = 10;
   const {
     data,
     isLoading,
@@ -206,8 +227,8 @@ export default function DashboardPage() {
     queryFn: ({ pageParam = 0 }) => listDashboardGigs(user!.id, {
       from: dateRange.from,
       to: dateRange.to,
-      limit: 20,
-      offset: pageParam * 20,
+      limit: PAGE_SIZE,
+      offset: pageParam * PAGE_SIZE,
     }),
     getNextPageParam: (lastPage, allPages) => {
       if (lastPage.hasMore) {
@@ -262,13 +283,17 @@ export default function DashboardPage() {
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Fetch recent past gigs (last 20 from past 30 days)
+  // Fetch recent past gigs (start with 5, load more on demand)
+  // PERFORMANCE: Only load 5 initially for faster page load
+  const RECENT_GIGS_LIMIT = 5;
+  const [showMoreRecent, setShowMoreRecent] = useState(false);
+  
   const {
     data: recentPastGigs = [],
     isLoading: isLoadingRecent,
   } = useQuery({
-    queryKey: ["recent-past-gigs", user?.id],
-    queryFn: () => listRecentPastGigs(user!.id),
+    queryKey: ["recent-past-gigs", user?.id, showMoreRecent ? 20 : RECENT_GIGS_LIMIT],
+    queryFn: () => listRecentPastGigs(user!.id, showMoreRecent ? 20 : RECENT_GIGS_LIMIT),
     enabled: !!user && showRecentGigs,
     staleTime: 1000 * 60 * 5, // 5 minutes (past gigs don't change often)
   });
@@ -303,20 +328,32 @@ export default function DashboardPage() {
     return upcomingGigs;
   }, [upcomingGigs, roleFilter]);
 
+  // Filter by project (from ProjectBar URL params)
+  const projectFilteredGigs = useMemo(() => {
+    if (projectFilter === "all") return roleFilteredGigs;
+    return roleFilteredGigs.filter(g => g.projectId === projectFilter);
+  }, [roleFilteredGigs, projectFilter]);
+
+  // Also filter today's gigs by project
+  const projectFilteredTodayGigs = useMemo(() => {
+    if (projectFilter === "all") return todayGigs;
+    return todayGigs.filter(g => g.projectId === projectFilter);
+  }, [todayGigs, projectFilter]);
+
   // Filter gigs by search query (gig title, project name, location)
   const searchFilteredGigs = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) return roleFilteredGigs;
+    if (!debouncedSearchQuery.trim()) return projectFilteredGigs;
     
     const query = debouncedSearchQuery.toLowerCase().trim();
     
-    return roleFilteredGigs.filter(gig => {
+    return projectFilteredGigs.filter(gig => {
       const titleMatch = gig.gigTitle?.toLowerCase().includes(query);
       const projectMatch = gig.projectName?.toLowerCase().includes(query);
       const locationMatch = gig.locationName?.toLowerCase().includes(query);
       
       return titleMatch || projectMatch || locationMatch;
     });
-  }, [roleFilteredGigs, debouncedSearchQuery]);
+  }, [projectFilteredGigs, debouncedSearchQuery]);
 
   // Get sort label for display
   const getSortLabel = (sortBy: SortBy, sortOrder: SortOrder): string => {
@@ -436,7 +473,7 @@ export default function DashboardPage() {
             <Calendar className="h-5 w-5" />
             Today
           </h3>
-          {!isLoading && todayGigs.length > 0 && (
+          {!isLoading && projectFilteredTodayGigs.length > 0 && (
             <div className="flex gap-1 border rounded-md p-1 h-8 items-center">
               <Button
                 variant={todayViewMode === "list" ? "default" : "ghost"}
@@ -459,10 +496,12 @@ export default function DashboardPage() {
         </div>
         
         {isLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-24 w-full" />
-          </div>
-        ) : todayGigs.length === 0 ? (
+          todayViewMode === "grid" ? (
+            <DashboardGigGridListSkeleton count={3} />
+          ) : (
+            <DashboardGigListSkeleton count={2} />
+          )
+        ) : projectFilteredTodayGigs.length === 0 ? (
           <Card>
             <CardContent className="py-12">
               <div className="flex flex-col items-center justify-center text-center">
@@ -476,13 +515,13 @@ export default function DashboardPage() {
           </Card>
         ) : todayViewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {todayGigs.map((gig) => (
+            {projectFilteredTodayGigs.map((gig) => (
               <DashboardGigItemGrid key={gig.gigId} gig={gig} />
             ))}
           </div>
         ) : (
           <div className="space-y-3">
-            {todayGigs.map((gig) => (
+            {projectFilteredTodayGigs.map((gig) => (
               <DashboardGigItem key={gig.gigId} gig={gig} />
             ))}
           </div>
@@ -738,11 +777,7 @@ export default function DashboardPage() {
         {showRecentGigs && (
           <>
             {isLoadingRecent ? (
-              <div className="space-y-3">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
-              </div>
+              <DashboardGigListSkeleton count={3} />
             ) : recentPastGigs.length === 0 ? (
               <Card>
                 <CardContent className="py-8">
@@ -756,6 +791,18 @@ export default function DashboardPage() {
                 {recentPastGigs.map((gig) => (
                   <DashboardGigItem key={gig.gigId} gig={gig} />
                 ))}
+              </div>
+            )}
+            {/* Show More Button (if not showing all yet) */}
+            {!showMoreRecent && recentPastGigs.length >= RECENT_GIGS_LIMIT && (
+              <div className="pt-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setShowMoreRecent(true)}
+                >
+                  Show More Recent Gigs
+                </Button>
               </div>
             )}
             {/* View All Past Gigs Link */}

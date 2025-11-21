@@ -113,7 +113,7 @@ export function EditGigDialog({
         location_address: null,
         schedule: null,
         notes: notes.trim() || null,
-        project_id: selectedProjectId || null,
+        project_id: selectedProjectId || undefined,
       });
 
       onSuccess();

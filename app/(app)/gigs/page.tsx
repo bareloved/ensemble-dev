@@ -1,18 +1,11 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Music,
   Plus,
@@ -36,9 +29,12 @@ export default function AllGigsPage() {
   const { user } = useUser();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+
+  // Get project filter from URL params (set by ProjectBar)
+  const projectFilter = searchParams.get("project") || "all";
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [projectFilter, setProjectFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [createGigDialogOpen, setCreateGigDialogOpen] = useState(false);
@@ -51,24 +47,6 @@ export default function AllGigsPage() {
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
-
-  // Fetch user's projects for filter dropdown (excluding personal projects)
-  const { data: projects = [] } = useQuery({
-    queryKey: ["projects", user?.id],
-    queryFn: async () => {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("projects")
-        .select("id, name, is_personal")
-        .eq("owner_id", user!.id)
-        .neq("is_personal", true)
-        .order("name");
-
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!user?.id,
-  });
 
   // Fetch all gigs (with and without projects) using infinite query
   const {
@@ -112,7 +90,7 @@ export default function AllGigsPage() {
             role_name,
             invitation_status,
             agreed_fee,
-            is_paid
+            payment_status
           )
         `
         )
@@ -144,7 +122,7 @@ export default function AllGigsPage() {
           const playerRole = userRoles[0];
           let paymentStatus: "paid" | "unpaid" | null = null;
           if (isPlayer && playerRole) {
-            paymentStatus = playerRole.is_paid ? "paid" : "unpaid";
+            paymentStatus = playerRole.payment_status === 'paid' ? "paid" : "unpaid";
           }
 
           // Extract host name from project owner
@@ -242,35 +220,18 @@ export default function AllGigsPage() {
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">All Gigs</h2>
-          <p className="text-muted-foreground">Manage all your gigs in one place</p>
+          <p className="text-muted-foreground">
+            {projectFilter === "all" 
+              ? "Manage all your gigs in one place"
+              : "Filtered by project"}
+          </p>
         </div>
-
-        <Button onClick={() => setCreateGigDialogOpen(true)} size="sm" className="gap-2">
-          <Plus className="h-4 w-4" />
-          Create Gig
-        </Button>
       </div>
 
-      {/* Filters */}
+      {/* Filters - Search and View Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-2 border-b">
-        {/* Project Filter */}
-        <Select value={projectFilter} onValueChange={setProjectFilter}>
-          <SelectTrigger className="w-[200px] h-9 text-sm">
-            <SelectValue placeholder="Filter by project" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Projects</SelectItem>
-            <SelectItem value="none">My Gigs</SelectItem>
-            {projects.map((project) => (
-              <SelectItem key={project.id} value={project.id}>
-                {project.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         {/* Search and View Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1 w-full justify-end">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />

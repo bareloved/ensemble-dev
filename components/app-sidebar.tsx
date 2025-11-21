@@ -296,7 +296,7 @@ export function AppSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton size="lg">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="" alt={user?.email || "User"} />
+                    <AvatarImage src={profile?.avatar_url || undefined} alt={user?.email || "User"} />
                     <AvatarFallback>
                       {getInitials(profile?.name || user?.user_metadata?.name, user?.email)}
                     </AvatarFallback>

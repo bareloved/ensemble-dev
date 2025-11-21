@@ -199,7 +199,7 @@ export function AddFromCircleDialog({
                                 {contact.primary_instrument}
                               </div>
                             )}
-                            {contact.times_worked_together > 0 && (
+                            {contact.times_worked_together && contact.times_worked_together > 0 && (
                               <div className="text-xs text-muted-foreground mt-1">
                                 Worked together {contact.times_worked_together} times
                               </div>

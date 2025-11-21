@@ -91,12 +91,9 @@ export function ConflictWarningDialog({
                       </p>
                       <p className="text-xs text-gray-600">{conflict.projectName}</p>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1.5 items-center">
                       {conflict.isManager && (
-                        <Badge variant="secondary" className="text-xs">
-                          <Briefcase className="h-3 w-3 mr-1" />
-                          Managing
-                        </Badge>
+                        <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
                       )}
                       {conflict.isPlayer && (
                         <Badge variant="secondary" className="text-xs">

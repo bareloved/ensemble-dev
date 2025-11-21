@@ -27,7 +27,7 @@ export async function markAsPaid(gigRoleId: string): Promise<void> {
   const { error } = await supabase
     .from("gig_roles")
     .update({
-      is_paid: true,
+      payment_status: 'paid',
       paid_at: new Date().toISOString(),
     })
     .eq("id", gigRoleId);
@@ -46,7 +46,7 @@ export async function markAsUnpaid(gigRoleId: string): Promise<void> {
   const { error } = await supabase
     .from("gig_roles")
     .update({
-      is_paid: false,
+      payment_status: 'pending',
       paid_at: null,
     })
     .eq("id", gigRoleId);

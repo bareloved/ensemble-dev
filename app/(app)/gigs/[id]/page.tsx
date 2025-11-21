@@ -10,22 +10,66 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Calendar, Clock, MapPin, Music, DollarSign, Package, FileText, Trash2, Crown, Mail } from 'lucide-react';
 import { getGig, deleteGig } from '@/lib/api/gigs';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { EditGigDialog } from '@/components/edit-gig-dialog';
-import { DeleteGigDialog } from '@/components/delete-gig-dialog';
-import { GigPeopleSection } from '@/components/gig-people-section';
-import { GigSetlistSection } from '@/components/gig-setlist-section';
-import { GigResourcesSection } from '@/components/gig-resources-section';
-import { GigScheduleSection } from '@/components/gig-schedule-section';
+// PERFORMANCE: Lazy load heavy dialogs and sections - only loads when needed
+import dynamic from 'next/dynamic';
 import { GigStatusSelect } from '@/components/gig-status-select';
 import { GigStatusBadge } from '@/components/gig-status-badge';
 import { useUser } from '@/lib/providers/user-provider';
+
+// Lazy load dialogs (only when user clicks)
+const EditGigDialog = dynamic(
+  () => import('@/components/edit-gig-dialog').then((mod) => ({ default: mod.EditGigDialog })),
+  { ssr: false, loading: () => null }
+);
+
+const DeleteGigDialog = dynamic(
+  () => import('@/components/delete-gig-dialog').then((mod) => ({ default: mod.DeleteGigDialog })),
+  { ssr: false, loading: () => null }
+);
+
+// Lazy load heavy sections (reduces initial bundle, loads when tab is active)
+const GigPeopleSection = dynamic(
+  () => import('@/components/gig-people-section').then((mod) => ({ default: mod.GigPeopleSection })),
+  { 
+    ssr: false, 
+    loading: () => (
+      <div className="space-y-4">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </div>
+    )
+  }
+);
+
+const GigSetlistSection = dynamic(
+  () => import('@/components/gig-setlist-section').then((mod) => ({ default: mod.GigSetlistSection })),
+  { 
+    ssr: false, 
+    loading: () => <Skeleton className="h-64 w-full" />
+  }
+);
+
+const GigResourcesSection = dynamic(
+  () => import('@/components/gig-resources-section').then((mod) => ({ default: mod.GigResourcesSection })),
+  { 
+    ssr: false, 
+    loading: () => <Skeleton className="h-48 w-full" />
+  }
+);
+
+const GigScheduleSection = dynamic(
+  () => import('@/components/gig-schedule-section').then((mod) => ({ default: mod.GigScheduleSection })),
+  { 
+    ssr: false, 
+    loading: () => <Skeleton className="h-32 w-full" />
+  }
+);
 
 export default function GigDetailPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
   const gigId = params.id as string;
-  const returnUrl = searchParams.get('returnUrl') || '/dashboard';
   const { user } = useUser();
   const queryClient = useQueryClient();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -91,7 +135,7 @@ export default function GigDetailPage() {
     await new Promise(resolve => setTimeout(resolve, 0));
     
     // Navigate back to where the user came from
-    router.push(returnUrl);
+    router.back();
   };
 
   if (isLoading) {
@@ -131,7 +175,7 @@ export default function GigDetailPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => router.push(returnUrl)}
+              onClick={() => router.back()}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>

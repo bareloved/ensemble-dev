@@ -44,16 +44,22 @@ export async function GET(request: NextRequest) {
 
     // Exchange authorization code for tokens
     const googleClient = new GoogleCalendarClient();
-    console.log("[OAuth Callback] Exchanging code for tokens...");
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[OAuth Callback] Exchanging code for tokens...");
+    }
     const tokens = await googleClient.authorize(code);
-    console.log("[OAuth Callback] Tokens received:", {
-      has_access: !!tokens.access_token,
-      has_refresh: !!tokens.refresh_token,
-      expiry: new Date(tokens.expiry_date).toISOString(),
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[OAuth Callback] Tokens received:", {
+        has_access: !!tokens.access_token,
+        has_refresh: !!tokens.refresh_token,
+        expiry: new Date(tokens.expiry_date).toISOString(),
+      });
+    }
 
     // Store tokens in database
-    console.log("[OAuth Callback] Saving to database for user:", user.id);
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[OAuth Callback] Saving to database for user:", user.id);
+    }
     const { data: savedConnection, error: dbError } = await supabase
       .from("calendar_connections")
       .upsert(
@@ -81,7 +87,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log("[OAuth Callback] Successfully saved connection:", savedConnection);
+    if (process.env.NODE_ENV === 'development') {
+      console.log("[OAuth Callback] Successfully saved connection:", savedConnection);
+    }
 
     // Success! Redirect back to settings
     return NextResponse.redirect(

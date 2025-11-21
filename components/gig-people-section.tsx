@@ -118,7 +118,7 @@ export function GigPeopleSection({ gigId, gigTitle }: GigPeopleSectionProps) {
             musician_name: contact.contactName,
             agreed_fee: contact.agreedFee,
             invitation_status: 'pending',
-            is_paid: false,
+            payment_status: 'pending',
             notes: null,
             contact_id: contact.contactId,
           })
@@ -153,7 +153,7 @@ export function GigPeopleSection({ gigId, gigTitle }: GigPeopleSectionProps) {
         musician_name: contactName,
         agreed_fee: defaultFee,
         invitation_status: 'pending',
-        is_paid: false,
+        payment_status: 'pending',
         notes: null,
         contact_id: contactId,
       });
@@ -336,14 +336,14 @@ export function GigPeopleSection({ gigId, gigTitle }: GigPeopleSectionProps) {
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteClick(role.id)}
-                                className="h-10 w-10"
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteClick(role.id)}
+                              className="h-10 w-10"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
                             </div>
                           )}
                         </div>

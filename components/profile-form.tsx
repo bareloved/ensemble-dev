@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { COUNTRY_CODES } from "@/lib/utils/phone";
+import { uploadAvatar, getUserInitials } from "@/lib/utils/avatar";
+import { Camera, Loader2 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 interface ProfileFormProps {
@@ -23,6 +26,7 @@ interface ProfileFormProps {
     main_instrument: string | null;
     email: string | null;
     phone: string | null;
+    avatar_url: string | null;
     default_country_code: string | null;
   } | null;
   user: User;
@@ -30,12 +34,53 @@ interface ProfileFormProps {
 
 export function ProfileForm({ profile, user }: ProfileFormProps) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(profile?.name || "");
   const [instrument, setInstrument] = useState(profile?.main_instrument || "");
   const [phone, setPhone] = useState(profile?.phone || "");
   const [countryCode, setCountryCode] = useState(profile?.default_country_code || "+972");
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || "");
   const [loading, setLoading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAvatar(true);
+    setMessage(null);
+
+    try {
+      const publicUrl = await uploadAvatar(user.id, file);
+      
+      // Update profile with new avatar URL
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("id", user.id);
+
+      if (error) {
+        setMessage({ type: "error", text: error.message });
+      } else {
+        setAvatarUrl(publicUrl);
+        setMessage({ type: "success", text: "Avatar updated successfully!" });
+        router.refresh();
+      }
+    } catch (error) {
+      setMessage({ 
+        type: "error", 
+        text: error instanceof Error ? error.message : "Failed to upload avatar" 
+      });
+    } finally {
+      setUploadingAvatar(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +122,51 @@ export function ProfileForm({ profile, user }: ProfileFormProps) {
           {message.text}
         </div>
       )}
+
+      {/* Avatar Upload Section */}
+      <div className="space-y-2">
+        <Label>Profile Picture</Label>
+        <div className="flex items-center gap-4">
+          <Avatar className="h-20 w-20">
+            <AvatarImage src={avatarUrl || undefined} alt={name || "User"} />
+            <AvatarFallback className="text-lg">
+              {getUserInitials(name)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+              onChange={handleAvatarChange}
+              className="hidden"
+              disabled={uploadingAvatar}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar}
+            >
+              {uploadingAvatar ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Camera className="mr-2 h-4 w-4" />
+                  Change Avatar
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              JPG, PNG, WebP or GIF (max 5MB)
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
