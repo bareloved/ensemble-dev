@@ -75,7 +75,7 @@ export default function GigDetailPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  // Fetch gig details with project info
+  // Fetch gig details
   const {
     data: gig,
     isLoading,
@@ -85,8 +85,8 @@ export default function GigDetailPage() {
     queryFn: () => getGig(gigId),
   });
 
-  // Check ownership via project (gigs no longer have owner_id)
-  const isOwner = gig?.projects?.owner_id === user?.id;
+  // Check ownership via gig.owner_id
+  const isOwner = gig?.owner_id === user?.id;
   
   // Redirect non-owners to the read-only gig pack view (in useEffect to avoid render issues)
   useEffect(() => {
@@ -106,36 +106,61 @@ export default function GigDetailPage() {
     );
   }
 
+  // Handle case where gig doesn't exist (was deleted or doesn't exist)
+  if (!isLoading && !gig && !gigError) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center justify-center text-center">
+              <h3 className="text-lg font-semibold mb-2">Gig Not Found</h3>
+              <p className="text-sm text-muted-foreground max-w-sm mb-4">
+                This gig may have been deleted or you don't have access to it.
+              </p>
+              <Button onClick={() => router.push('/dashboard')}>
+                Go to Dashboard
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const handleDeleteGig = async () => {
     if (!gigId) return;
+    
+    // Cancel all queries for this gig to prevent refetches after deletion
+    queryClient.cancelQueries({ queryKey: ['gig', gigId] });
+    queryClient.cancelQueries({ queryKey: ['gig-roles', gigId] });
+    queryClient.cancelQueries({ queryKey: ['setlist', gigId] });
+    queryClient.cancelQueries({ queryKey: ['gig-files', gigId] });
+    
     await deleteGig(gigId);
     
-    // Invalidate all related caches (only refetches active/mounted queries)
+    // Remove the deleted gig from cache immediately
+    queryClient.removeQueries({ queryKey: ['gig', gigId] });
+    queryClient.removeQueries({ queryKey: ['gig-roles', gigId] });
+    queryClient.removeQueries({ queryKey: ['setlist', gigId] });
+    queryClient.removeQueries({ queryKey: ['gig-files', gigId] });
+    
+    // Invalidate related caches (but don't refetch - we're navigating away)
     queryClient.invalidateQueries({ 
       queryKey: ['dashboard-gigs', user?.id],
-      refetchType: 'active'
+      refetchType: 'none' // Don't refetch, just mark as stale
     });
     queryClient.invalidateQueries({ 
       queryKey: ['recent-past-gigs', user?.id],
-      refetchType: 'active'
+      refetchType: 'none'
+    });
+    queryClient.invalidateQueries({ 
+      queryKey: ['all-gigs', user?.id],
+      refetchType: 'none'
     });
     
-    if (gig?.project_id) {
-      queryClient.invalidateQueries({ 
-        queryKey: ['gigs', gig.project_id],
-        refetchType: 'active'
-      });
-      queryClient.invalidateQueries({ 
-        queryKey: ['project', gig.project_id],
-        refetchType: 'active'
-      });
-    }
-    
-    // Wait a tick for invalidation to process
-    await new Promise(resolve => setTimeout(resolve, 0));
-    
-    // Navigate back to where the user came from
-    router.back();
+    // Navigate to returnUrl if provided, otherwise default to dashboard
+    const returnUrl = searchParams.get('returnUrl') || '/dashboard';
+    router.push(returnUrl);
   };
 
   if (isLoading) {
@@ -162,7 +187,6 @@ export default function GigDetailPage() {
     );
   }
 
-  const project = gig.projects as any;
   const gigDate = new Date(gig.date);
   const isUpcoming = gigDate >= new Date();
 
@@ -184,26 +208,22 @@ export default function GigDetailPage() {
                 <h2 className="text-3xl font-bold tracking-tight">{gig.title}</h2>
                 {/* Host Badge */}
                 {(() => {
-                  const isOwner = project?.owner_id === user?.id;
-                  const hostName = project?.owner?.name || null;
-                  
+                  const hostName = (gig as any)?.owner?.name || null;
+
                   return isOwner ? (
                     <Badge variant="outline" className="gap-1 text-xs bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-950 dark:border-orange-800 dark:text-orange-300">
                       <Crown className="h-3 w-3" />
-                      Hosted by You
+                      You
                     </Badge>
                   ) : hostName ? (
                     <Badge variant="outline" className="gap-1 text-xs bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-300">
                       <Mail className="h-3 w-3" />
-                      Hosted by {hostName}
+                      {hostName}
                     </Badge>
                   ) : null;
                 })()}
                 {/* Show status select for managers, badge for players */}
                 {(() => {
-                  // Check if user is owner via project
-                  const isOwner = project?.owner_id === user?.id;
-                  
                   return isOwner ? (
                     <GigStatusSelect
                       gigId={gigId}
@@ -228,11 +248,6 @@ export default function GigDetailPage() {
                   );
                 })()}
               </div>
-              {project && !project.is_personal && (
-                <p className="text-sm text-muted-foreground">
-                  {project.name}
-                </p>
-              )}
             </div>
           </div>
         </div>

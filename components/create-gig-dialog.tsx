@@ -26,29 +26,18 @@ import {
 import { TimePickerInput } from "@/components/ui/time-picker-input";
 import { cn } from "@/lib/utils";
 import { createGig } from "@/lib/api/gigs";
-import { createClient } from "@/lib/supabase/client";
-import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/lib/providers/user-provider";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface CreateGigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: (gigId: string) => void;
-  projectId?: string | null;
 }
 
 export function CreateGigDialog({
   open,
   onOpenChange,
   onSuccess,
-  projectId = null,
 }: CreateGigDialogProps) {
   const { user } = useUser();
   const [title, setTitle] = useState("");
@@ -56,31 +45,12 @@ export function CreateGigDialog({
   const [startTime, setStartTime] = useState("");
   const [locationName, setLocationName] = useState("");
   const [notes, setNotes] = useState("");
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(projectId || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   // Enable Cmd+Enter / Ctrl+Enter to submit
   useKeyboardSubmit(open);
-
-  // Fetch user's projects for dropdown (excluding personal projects)
-  const { data: projects = [] } = useQuery({
-    queryKey: ["projects", user?.id],
-    queryFn: async () => {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("projects")
-        .select("id, name, is_personal")
-        .eq("owner_id", user!.id)
-        .neq("is_personal", true)
-        .order("name");
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!user?.id && open,
-  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,42 +64,7 @@ export function CreateGigDialog({
     setError(null);
 
     try {
-      let finalProjectId = selectedProjectId;
-      
-      // If no project selected, get or create user's personal project
-      if (!finalProjectId) {
-        const supabase = createClient();
-        
-        // Check if personal project exists
-        const { data: existingProject } = await supabase
-          .from("projects")
-          .select("id")
-          .eq("owner_id", user!.id)
-          .eq("is_personal", true)
-          .single();
-        
-        if (existingProject) {
-          finalProjectId = existingProject.id;
-        } else {
-          // Create personal project
-          const { data: newProject, error: createError } = await supabase
-            .from("projects")
-            .insert({
-              owner_id: user!.id,
-              name: 'My Gigs',
-              description: 'Auto-created personal project for standalone gigs',
-              is_personal: true,
-            })
-            .select("id")
-            .single();
-          
-          if (createError) throw createError;
-          finalProjectId = newProject.id;
-        }
-      }
-
       const gig = await createGig({
-        project_id: finalProjectId,
         title: title.trim(),
         date,
         start_time: startTime || null,
@@ -159,35 +94,9 @@ export function CreateGigDialog({
       <DialogContent className="sm:max-w-[600px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <div className="flex items-center justify-between gap-4 pr-8">
             <DialogTitle>Create New Gig</DialogTitle>
-              <div className="flex items-center gap-2">
-                <Label htmlFor="project" className="text-sm text-muted-foreground font-normal">
-                  Project
-                </Label>
-                <Select
-                  value={selectedProjectId || "none"}
-                  onValueChange={(value) => setSelectedProjectId(value === "none" ? null : value)}
-                  disabled={loading}
-                >
-                  <SelectTrigger className="h-8 w-[180px] text-xs">
-                    <SelectValue placeholder="My Gigs" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none" className="text-xs">
-                      My Gigs
-                    </SelectItem>
-                    {projects.map((project) => (
-                      <SelectItem key={project.id} value={project.id} className="text-xs">
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
             <DialogDescription>
-              Add a new gig to this project.
+              Add a new gig.
             </DialogDescription>
           </DialogHeader>
 

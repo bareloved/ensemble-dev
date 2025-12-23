@@ -13,6 +13,7 @@ import {
   History,
   Plus,
   Menu,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +36,11 @@ const mainNavItems = [
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Invitations",
+    href: "/invitations",
+    icon: Mail,
   },
   {
     title: "Gigs",

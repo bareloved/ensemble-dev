@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Users, Trash2, Check, X, Mail, Send, Pencil } from 'lucide-react';
-import { listRolesForGig, addRoleToGig, deleteRole, addSystemUserToGig, inviteAllMusicians } from '@/lib/api/gig-roles';
+import { Users, Trash2, Check, X, Mail, Send, Pencil, RotateCcw, UserX } from 'lucide-react';
+import { listRolesForGig, addRoleToGig, deleteRole, addSystemUserToGig, inviteAllMusicians, reinviteMusician } from '@/lib/api/gig-roles';
 import { getGig } from '@/lib/api/gigs';
 import { useUser } from '@/lib/providers/user-provider';
 import { RoleStatusBadge } from '@/components/role-status-badge';
@@ -19,6 +19,7 @@ import { AddFromCircleDialog, type SelectedContact } from '@/components/add-from
 import { QuickInviteDialog } from '@/components/quick-invite-dialog';
 import { UnifiedMusicianSearch } from '@/components/unified-musician-search';
 import type { GigRole } from '@/lib/types/shared';
+import { toast } from 'sonner';
 
 interface GigPeopleSectionProps {
   gigId: string;
@@ -99,13 +100,26 @@ export function GigPeopleSection({ gigId, gigTitle }: GigPeopleSectionProps) {
         queryKey: ['dashboard-gigs', user?.id],
         refetchType: 'active'
       });
-      alert(`Invitations sent to ${result.count} musician${result.count !== 1 ? 's' : ''}!`);
+      toast.success(`Invitations sent to ${result.count} musician${result.count !== 1 ? 's' : ''}!`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to send invitations');
+      toast.error(err instanceof Error ? err.message : 'Failed to send invitations');
     } finally {
       setIsInviting(false);
     }
   };
+  
+  // Re-invite mutation for declined musicians
+  const reinviteMutation = useMutation({
+    mutationFn: (roleId: string) => reinviteMusician(roleId),
+    onSuccess: () => {
+      toast.success('Musician has been re-invited!');
+      queryClient.invalidateQueries({ queryKey: ['gig-roles', gigId] });
+      queryClient.invalidateQueries({ queryKey: ['gig', gigId] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to re-invite musician');
+    },
+  });
 
   const handleAddFromCircle = async (selectedContacts: SelectedContact[]) => {
     try {
@@ -303,7 +317,7 @@ export function GigPeopleSection({ gigId, gigTitle }: GigPeopleSectionProps) {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="relative w-[112px] h-10">
+                        <div className="relative min-w-[112px] h-10">
                           {roleIdPendingDelete === role.id ? (
                             <div className="absolute inset-0 flex items-center gap-0">
                               <Button
@@ -321,6 +335,29 @@ export function GigPeopleSection({ gigId, gigTitle }: GigPeopleSectionProps) {
                                 className="h-9 w-9"
                               >
                                 <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : role.invitation_status === 'declined' ? (
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => reinviteMutation.mutate(role.id)}
+                                disabled={reinviteMutation.isPending}
+                                className="h-8 gap-1 text-xs"
+                                title="Re-invite this musician"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                                Re-invite
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteClick(role.id)}
+                                className="h-8 w-8"
+                                title="Replace this musician"
+                              >
+                                <UserX className="h-4 w-4 text-destructive" />
                               </Button>
                             </div>
                           ) : (
@@ -357,8 +394,8 @@ export function GigPeopleSection({ gigId, gigTitle }: GigPeopleSectionProps) {
 
           {/* Invite All Button - Shows when there are pending musicians to invite */}
           {!isGigLoading && gig && roles.length > 0 && (() => {
-            // Check if user is owner (project owner)
-            const isOwner = gig.projects?.owner_id === user?.id;
+            // Check if user is owner (gig owner)
+            const isOwner = gig.owner_id === user?.id;
             
             // Show button if there are any musicians with pending status
             const hasPendingMusicians = roles.some(role => 

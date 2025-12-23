@@ -69,7 +69,6 @@ export function PayoutsTable({ payouts }: { payouts: PayoutRow[] }) {
           <TableRow>
             <TableHead>Date</TableHead>
             <TableHead>Gig</TableHead>
-            <TableHead>Band/Project</TableHead>
             <TableHead>Musician</TableHead>
             <TableHead>Role</TableHead>
             <TableHead className="text-right">Fee</TableHead>
@@ -92,7 +91,6 @@ export function PayoutsTable({ payouts }: { payouts: PayoutRow[] }) {
               >
                 {payout.gigTitle}
               </TableCell>
-              <TableCell>{payout.projectName}</TableCell>
               <TableCell>{payout.musicianName || '—'}</TableCell>
               <TableCell>{payout.roleName}</TableCell>
               <TableCell className="text-right">

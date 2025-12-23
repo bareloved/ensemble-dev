@@ -63,7 +63,7 @@ interface ColumnConfig {
 const COLUMNS: ColumnConfig[] = [
   { key: 'date', label: 'Date', defaultVisible: true },
   { key: 'gig', label: 'Gig', defaultVisible: true },
-  { key: 'project', label: 'Band/Project', defaultVisible: true },
+  { key: 'project', label: 'Host', defaultVisible: true },
   { key: 'role', label: 'Role', defaultVisible: true },
   { key: 'location', label: 'Location', defaultVisible: false },
   { key: 'fee', label: 'Fee', defaultVisible: true },
@@ -294,8 +294,8 @@ export function MyEarningsTable({ gigs }: { gigs: MyEarningsGig[] }) {
           bValue = b.gigTitle.toLowerCase();
           break;
         case 'project':
-          aValue = a.projectName.toLowerCase();
-          bValue = b.projectName.toLowerCase();
+          aValue = (a.hostName || '').toLowerCase();
+          bValue = (b.hostName || '').toLowerCase();
           break;
         case 'role':
           aValue = a.roleName.toLowerCase();
@@ -464,7 +464,7 @@ export function MyEarningsTable({ gigs }: { gigs: MyEarningsGig[] }) {
                     case 'project':
                       return (
                         <TableCell key={column.key}>
-                          {gig.projectName}
+                          {gig.hostName || '—'}
                         </TableCell>
                       );
                     

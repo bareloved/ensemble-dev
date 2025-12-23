@@ -27,16 +27,6 @@ import { TimePickerInput } from "@/components/ui/time-picker-input";
 import { cn } from "@/lib/utils";
 import { updateGig } from "@/lib/api/gigs";
 import type { Gig } from "@/lib/types/shared";
-import { createClient } from "@/lib/supabase/client";
-import { useQuery } from "@tanstack/react-query";
-import { useUser } from "@/lib/providers/user-provider";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface EditGigDialogProps {
   open: boolean;
@@ -51,36 +41,17 @@ export function EditGigDialog({
   onSuccess,
   gig,
 }: EditGigDialogProps) {
-  const { user } = useUser();
   const [title, setTitle] = useState(gig.title);
   const [date, setDate] = useState(gig.date);
   const [startTime, setStartTime] = useState(gig.start_time || "");
   const [locationName, setLocationName] = useState(gig.location_name || "");
   const [notes, setNotes] = useState(gig.notes || "");
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(gig.project_id);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   // Enable Cmd+Enter / Ctrl+Enter to submit
   useKeyboardSubmit(open);
-
-  // Fetch user's projects for dropdown
-  const { data: projects = [] } = useQuery({
-    queryKey: ["projects", user?.id],
-    queryFn: async () => {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("projects")
-        .select("id, name")
-        .eq("owner_id", user!.id)
-        .order("name");
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!user?.id && open,
-  });
 
   // Update form when gig changes
   useEffect(() => {
@@ -89,7 +60,6 @@ export function EditGigDialog({
     setStartTime(gig.start_time || "");
     setLocationName(gig.location_name || "");
     setNotes(gig.notes || "");
-    setSelectedProjectId(gig.project_id);
   }, [gig]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -113,7 +83,6 @@ export function EditGigDialog({
         location_address: null,
         schedule: null,
         notes: notes.trim() || null,
-        project_id: selectedProjectId || undefined,
       });
 
       onSuccess();
@@ -130,33 +99,7 @@ export function EditGigDialog({
       <DialogContent className="sm:max-w-[600px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <div className="flex items-center justify-between gap-4 pr-8">
-              <DialogTitle>Edit Gig</DialogTitle>
-              <div className="flex items-center gap-2">
-                <Label htmlFor="project" className="text-sm text-muted-foreground font-normal">
-                  Project
-                </Label>
-                <Select
-                  value={selectedProjectId || "none"}
-                  onValueChange={(value) => setSelectedProjectId(value === "none" ? null : value)}
-                  disabled={loading}
-                >
-                  <SelectTrigger className="h-8 w-[180px] text-xs">
-                    <SelectValue placeholder="My Gigs" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none" className="text-xs">
-                      My Gigs
-                    </SelectItem>
-                    {projects.map((project) => (
-                      <SelectItem key={project.id} value={project.id} className="text-xs">
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <DialogTitle>Edit Gig</DialogTitle>
             <DialogDescription>
               Update gig details.
             </DialogDescription>

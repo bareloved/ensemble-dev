@@ -126,7 +126,7 @@ export default function HistoryPage() {
     return filtered;
   }, [dateFilteredGigs, roleFilter]);
 
-  // Filter gigs by search query (gig title, project name, location)
+  // Filter gigs by search query (gig title, host name, location)
   const searchFilteredGigs = useMemo(() => {
     if (!debouncedSearchQuery.trim()) return roleFilteredGigs;
     
@@ -134,10 +134,10 @@ export default function HistoryPage() {
     
     return roleFilteredGigs.filter(gig => {
       const titleMatch = gig.gigTitle?.toLowerCase().includes(query);
-      const projectMatch = gig.projectName?.toLowerCase().includes(query);
+      const hostMatch = gig.hostName?.toLowerCase().includes(query);
       const locationMatch = gig.locationName?.toLowerCase().includes(query);
       
-      return titleMatch || projectMatch || locationMatch;
+      return titleMatch || hostMatch || locationMatch;
     });
   }, [roleFilteredGigs, debouncedSearchQuery]);
 

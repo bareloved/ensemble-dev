@@ -1,11 +1,8 @@
 "use client";
 
 import { TopNav } from "@/components/top-nav";
-import { ProjectBar } from "@/components/project-bar";
 import { useUser } from "@/lib/providers/user-provider";
-import { useQueryClient } from "@tanstack/react-query";
-import { listUserProjects } from "@/lib/api/projects";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 export default function AppLayout({
@@ -14,10 +11,8 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const { isLoading: isUserLoading, user } = useUser();
-  const queryClient = useQueryClient();
   const router = useRouter();
   const pathname = usePathname();
-  const [isDataPrefetched, setIsDataPrefetched] = useState(false);
 
   // Client-side auth check (fallback in case middleware doesn't catch it)
   useEffect(() => {
@@ -28,43 +23,8 @@ export default function AppLayout({
     }
   }, [isUserLoading, user, router, pathname]);
 
-  // Prefetch projects data once user is loaded
-  // Reset when user changes to force re-prefetch
-  useEffect(() => {
-    // Reset prefetch flag when user changes
-    setIsDataPrefetched(false);
-
-    async function prefetchData() {
-      if (isUserLoading) {
-        // Still loading user, don't prefetch yet
-        return;
-      }
-
-      if (!user) {
-        // No user (shouldn't happen due to middleware, but be safe)
-        setIsDataPrefetched(true);
-        return;
-      }
-
-      try {
-        // Include user.id in query key to prevent cross-user cache pollution
-        await queryClient.prefetchQuery({
-          queryKey: ["projects", user.id],
-          queryFn: listUserProjects,
-          staleTime: 1000 * 60 * 5,
-        });
-      } catch {
-        // Unlock UI even if prefetch fails
-      } finally {
-        setIsDataPrefetched(true);
-      }
-    }
-
-    prefetchData();
-  }, [isUserLoading, user?.id, queryClient]);
-
-  // Show full-screen loading until all data is fetched
-  const isLoading = isUserLoading || !isDataPrefetched;
+  // Show full-screen loading while user is loading
+  const isLoading = isUserLoading;
 
   if (isLoading) {
     return (
@@ -90,9 +50,6 @@ export default function AppLayout({
     <div className="min-h-screen bg-background">
       {/* Row 1 - Global App Bar */}
       <TopNav />
-      
-      {/* Row 2 - Context / Projects Bar */}
-      <ProjectBar />
       
       {/* Main Content Area */}
       <main className="container mx-auto p-6 max-w-7xl">

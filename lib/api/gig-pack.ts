@@ -32,16 +32,10 @@ export async function getGigPack(
       status,
       notes,
       schedule,
-      project_id,
-      projects(
+      owner_id,
+      owner:profiles!gigs_owner_id_fkey(
         id,
-        name,
-        cover_image_url,
-        owner_id,
-        is_personal,
-        owner:profiles!projects_owner_id_fkey(
-          name
-        )
+        name
       )
     `
     )
@@ -120,14 +114,10 @@ export async function getGigPack(
     status: gig.status,
     notes: gig.notes,
     schedule: gig.schedule,
-    project: gig.projects
+    host: gig.owner
       ? {
-          id: gig.projects.id,
-          name: gig.projects.name,
-          coverImageUrl: gig.projects.cover_image_url,
-          ownerId: gig.projects.owner_id,
-          ownerName: gig.projects.owner?.name || 'Unknown',
-          isPersonal: gig.projects.is_personal,
+          id: gig.owner.id,
+          name: gig.owner.name || 'Unknown',
         }
       : null,
     setlist: setlist || [],

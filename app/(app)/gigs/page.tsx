@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,10 +29,6 @@ export default function AllGigsPage() {
   const { user } = useUser();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const searchParams = useSearchParams();
-
-  // Get project filter from URL params (set by ProjectBar)
-  const projectFilter = searchParams.get("project") || "all";
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [searchQuery, setSearchQuery] = useState("");
@@ -68,21 +64,16 @@ export default function AllGigsPage() {
         .select(
           `
           id,
+          owner_id,
           title,
           date,
           start_time,
           end_time,
           location_name,
           status,
-          project_id,
-          projects (
+          owner:profiles!gigs_owner_id_fkey (
             id,
-            name,
-            owner_id,
-            is_personal,
-            owner:profiles!projects_owner_id_fkey (
-              name
-            )
+            name
           ),
           gig_roles (
             id,
@@ -102,21 +93,32 @@ export default function AllGigsPage() {
 
       // Transform to DashboardGig format
       // Filter and transform gigs where user is either manager or player
+      // Exclude declined invitations from player perspective
       const transformedGigs: DashboardGig[] = (gigs || [])
         .filter((gig: any) => {
           const roles = Array.isArray(gig.gig_roles) ? gig.gig_roles : [];
-          const userRoles = roles.filter((r: any) => r?.musician_id === user?.id);
-          // Check if user is manager (owner of the project)
-          const isManager = gig.projects?.owner_id === user?.id;
+          // Only consider roles that are not pending or declined
+          const userRoles = roles.filter((r: any) => 
+            r?.musician_id === user?.id && 
+            r?.invitation_status !== 'pending' && 
+            r?.invitation_status !== 'declined'
+          );
+          // Check if user is manager (owner of the gig)
+          const isManager = gig.owner_id === user?.id;
           const isPlayer = userRoles.length > 0;
-          // Only include gigs where user is manager or player
+          // Only include gigs where user is manager or player (with active invitation)
           return isManager || isPlayer;
         })
         .map((gig: any) => {
           const roles = Array.isArray(gig.gig_roles) ? gig.gig_roles : [];
-          const userRoles = roles.filter((r: any) => r?.musician_id === user?.id);
-          // Check if user is manager (owner of the project)
-          const isManager = gig.projects?.owner_id === user?.id;
+          // Only consider roles that are not pending or declined
+          const userRoles = roles.filter((r: any) => 
+            r?.musician_id === user?.id && 
+            r?.invitation_status !== 'pending' && 
+            r?.invitation_status !== 'declined'
+          );
+          // Check if user is manager (owner of the gig)
+          const isManager = gig.owner_id === user?.id;
           const isPlayer = userRoles.length > 0;
 
           const playerRole = userRoles[0];
@@ -125,13 +127,8 @@ export default function AllGigsPage() {
             paymentStatus = playerRole.payment_status === 'paid' ? "paid" : "unpaid";
           }
 
-          // Extract host name from project owner
-          const projectOwner = gig.projects
-            ? (Array.isArray(gig.projects.owner)
-              ? gig.projects.owner[0]
-              : gig.projects.owner)
-            : null;
-          const hostName = projectOwner?.name || null;
+          const ownerData = Array.isArray(gig.owner) ? gig.owner[0] : gig.owner;
+          const hostName = ownerData?.name || null;
 
           return {
             gigId: gig.id,
@@ -141,15 +138,13 @@ export default function AllGigsPage() {
             endTime: gig.end_time,
             locationName: gig.location_name,
             status: gig.status,
-            projectId: gig.project_id,
-            projectName: gig.projects?.name || null,
             isManager,
             isPlayer,
             playerRoleName: playerRole?.role_name || null,
             invitationStatus: playerRole?.invitation_status || null,
             paymentStatus,
+            hostId: gig.owner_id,
             hostName,
-            isPersonalProject: gig.projects?.is_personal || false,
           };
         });
 
@@ -188,29 +183,20 @@ export default function AllGigsPage() {
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Filter by project
-  const projectFilteredGigs = useMemo(() => {
-    if (projectFilter === "all") return allGigs;
-    if (projectFilter === "none") {
-      return allGigs.filter((g) => !g.projectId);
-    }
-    return allGigs.filter((g) => g.projectId === projectFilter);
-  }, [allGigs, projectFilter]);
-
   // Filter by search query
   const searchFilteredGigs = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) return projectFilteredGigs;
+    if (!debouncedSearchQuery.trim()) return allGigs;
 
     const query = debouncedSearchQuery.toLowerCase().trim();
 
-    return projectFilteredGigs.filter((gig) => {
+    return allGigs.filter((gig) => {
       return (
         gig.gigTitle.toLowerCase().includes(query) ||
-        (gig.projectName && gig.projectName.toLowerCase().includes(query)) ||
+        (gig.hostName && gig.hostName.toLowerCase().includes(query)) ||
         (gig.locationName && gig.locationName.toLowerCase().includes(query))
       );
     });
-  }, [projectFilteredGigs, debouncedSearchQuery]);
+  }, [allGigs, debouncedSearchQuery]);
 
   const filteredGigs = searchFilteredGigs;
 
@@ -221,9 +207,7 @@ export default function AllGigsPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">All Gigs</h2>
           <p className="text-muted-foreground">
-            {projectFilter === "all" 
-              ? "Manage all your gigs in one place"
-              : "Filtered by project"}
+            Manage all your gigs in one place
           </p>
         </div>
       </div>
@@ -299,7 +283,7 @@ export default function AllGigsPage() {
               <Music className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-1">No gigs found</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                {searchQuery || projectFilter !== "all"
+                {searchQuery
                   ? "Try adjusting your filters or search query."
                   : "Create your first gig to get started."}
               </p>
@@ -343,7 +327,6 @@ export default function AllGigsPage() {
       <CreateGigDialog
         open={createGigDialogOpen}
         onOpenChange={setCreateGigDialogOpen}
-        projectId={null}
         onSuccess={(gigId) => {
           queryClient.invalidateQueries({ queryKey: ["all-gigs"] });
           queryClient.invalidateQueries({ queryKey: ["dashboard-gigs"] });

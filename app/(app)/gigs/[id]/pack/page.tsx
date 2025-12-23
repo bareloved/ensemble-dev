@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +19,8 @@ import { formatCurrency } from '@/lib/utils/currency';
 import { FileTypeIcon } from '@/components/file-type-icon';
 import { PlayerStatusActions } from '@/components/player-status-actions';
 import { HostNotesSection } from '@/components/host-notes-section';
+import { updateMyInvitationStatus, checkIfRoleReplaced } from '@/lib/api/gig-roles';
+import { toast } from 'sonner';
 
 export default function GigPackPage() {
   const params = useParams();
@@ -26,12 +28,40 @@ export default function GigPackPage() {
   const gigId = params.id as string;
   const returnUrl = searchParams.get('returnUrl') || '/dashboard';
   const { user } = useUser();
+  const queryClient = useQueryClient();
 
   const { data: pack, isLoading, error } = useQuery({
     queryKey: ['gig-pack', gigId, user?.id],
     queryFn: () => getGigPack(gigId, user!.id),
     enabled: !!user?.id && !!gigId,
     staleTime: 1 * 60 * 1000, // 1 minute
+  });
+  
+  // Re-accept mutation for declined invitations
+  const reacceptMutation = useMutation({
+    mutationFn: async () => {
+      if (!pack?.userRole?.roleId) {
+        throw new Error('Role not found');
+      }
+      
+      // Check if role was replaced
+      const isReplaced = await checkIfRoleReplaced(pack.userRole.roleId);
+      if (isReplaced) {
+        throw new Error("This spot has already been filled. Ask the host if they want to re-invite you.");
+      }
+      
+      // Accept the role
+      await updateMyInvitationStatus(pack.userRole.roleId, 'accepted');
+    },
+    onSuccess: () => {
+      toast.success("You're now playing this gig.");
+      queryClient.invalidateQueries({ queryKey: ['gig-pack'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-gigs'] });
+      queryClient.invalidateQueries({ queryKey: ['declined-invitations'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to accept invitation");
+    },
   });
 
   if (!user) {
@@ -68,8 +98,8 @@ export default function GigPackPage() {
     );
   }
 
-  // Check if user is the owner (via project)
-  const isOwner = pack.project?.ownerId === user?.id;
+  // Check if user is the gig owner
+  const isOwner = pack.host?.id === user?.id;
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4 pb-20">
@@ -95,26 +125,47 @@ export default function GigPackPage() {
           <div className="flex items-center gap-4 flex-wrap">
             <h1 className="text-2xl font-bold">{pack.title}</h1>
             {/* Host Badge */}
-            {user && pack.project?.ownerId === user.id ? (
+            {user && pack.host?.id === user.id ? (
               <Badge variant="outline" className="gap-1 text-xs bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-950 dark:border-orange-800 dark:text-orange-300">
                 <Crown className="h-3 w-3" />
-                Hosted by You
+                You
               </Badge>
-            ) : pack.project ? (
+            ) : pack.host ? (
               <Badge variant="outline" className="gap-1 text-xs bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-300">
                 <Mail className="h-3 w-3" />
-                Hosted by {pack.project.ownerName}
+                {pack.host.name}
               </Badge>
             ) : null}
             <GigStatusBadge status={pack.status} />
           </div>
-          {pack.project && !pack.project.name.includes("My Gigs") && (
-            <p className="text-sm text-muted-foreground">
-              {pack.project.name}
-            </p>
-          )}
         </div>
       </div>
+
+      {/* Declined Invitation Banner */}
+      {pack.userRole && pack.userRole.invitationStatus === 'declined' && (
+        <Card className="border-destructive bg-destructive/5">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-3">
+                <div>
+                  <h3 className="font-semibold text-destructive mb-1">You declined this gig</h3>
+                  <p className="text-sm text-muted-foreground">
+                    You previously declined this invitation. If you've changed your mind, you can accept it now—unless the spot has already been filled.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => reacceptMutation.mutate()}
+                  disabled={reacceptMutation.isPending}
+                  size="sm"
+                >
+                  {reacceptMutation.isPending ? 'Accepting...' : 'Accept instead'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Logistics */}
       <Card>

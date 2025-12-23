@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calendar, MapPin, Package, Users, Briefcase, Music, MoreVertical, DollarSign, Check, X, User, Crown, Mail } from "lucide-react";
+import { Calendar, MapPin, Package, Briefcase, MoreVertical, Check, X, Crown, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useUser } from "@/lib/providers/user-provider";
@@ -112,24 +112,18 @@ export function DashboardGigItem({ gig, isPastGig = false, returnUrl = "/dashboa
             <div className="flex items-start justify-between gap-2">
               <div className="space-y-1 flex-1 min-w-0">
                 <h3 className="font-semibold truncate">{gig.gigTitle}</h3>
-                {gig.projectName && !gig.projectName.includes("My Gigs") && (
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Music className="h-3.5 w-3.5" />
-                    <span>{gig.projectName}</span>
-                  </div>
-                )}
               </div>
               <div className="flex flex-col gap-2 items-end flex-shrink-0">
                 {/* Host Badge */}
                 {gig.isManager ? (
                   <Badge variant="outline" className="gap-1 text-xs bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-950 dark:border-orange-800 dark:text-orange-300">
                     <Crown className="h-3 w-3" />
-                    Hosted by You
+                    You
                   </Badge>
                 ) : gig.hostName ? (
                   <Badge variant="outline" className="gap-1 text-xs bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-300">
                     <Mail className="h-3 w-3" />
-                    Hosted by {gig.hostName}
+                    {gig.hostName}
                   </Badge>
                 ) : null}
                 {/* Gig Status */}

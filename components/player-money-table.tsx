@@ -35,7 +35,7 @@ export function PlayerMoneyTable({ gigs }: PlayerMoneyTableProps) {
         <TableHeader>
           <TableRow>
             <TableHead>Date</TableHead>
-            <TableHead>Project</TableHead>
+            <TableHead>Host</TableHead>
             <TableHead>Gig</TableHead>
             <TableHead>Role</TableHead>
             <TableHead className="text-right">Fee</TableHead>
@@ -52,7 +52,7 @@ export function PlayerMoneyTable({ gigs }: PlayerMoneyTableProps) {
               </TableCell>
               <TableCell>
                 <Link href={`/gigs/${gig.id}/pack?returnUrl=/money`} className="block">
-                  {gig.projectName}
+                  {gig.hostName || '—'}
                 </Link>
               </TableCell>
               <TableCell>

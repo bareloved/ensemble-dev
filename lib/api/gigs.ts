@@ -5,27 +5,21 @@ import { createNotification } from "./notifications";
 export async function createGig(data: Omit<GigInsert, "id" | "created_at" | "updated_at">) {
   const supabase = createClient();
 
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError) throw new Error(`Authentication failed: ${authError.message}`);
+  if (!user) throw new Error("Not authenticated. Please sign in again.");
+
   const { data: gig, error } = await supabase
     .from("gigs")
-    .insert(data)
+    .insert({
+      ...data,
+      owner_id: user.id,
+    })
     .select()
     .single();
 
   if (error) throw new Error(error.message || "Failed to create gig");
   return gig;
-}
-
-export async function listGigsForProject(projectId: string) {
-  const supabase = createClient();
-
-  const { data: gigs, error } = await supabase
-    .from("gigs")
-    .select("*")
-    .eq("project_id", projectId)
-    .order("date", { ascending: true });
-
-  if (error) throw new Error(error.message || "Failed to fetch gigs");
-  return gigs || [];
 }
 
 export async function getGig(gigId: string) {
@@ -35,18 +29,22 @@ export async function getGig(gigId: string) {
     .from("gigs")
     .select(`
       *,
-      projects (
-        *,
-        owner:profiles!projects_owner_id_fkey (
-          id,
-          name
-        )
+      owner:profiles!gigs_owner_id_fkey (
+        id,
+        name
       )
     `)
     .eq("id", gigId)
     .single();
 
-  if (error) throw new Error(error.message || "Failed to fetch gig");
+  // Handle case where gig doesn't exist (404) or access denied (403/406)
+  if (error) {
+    // If gig not found or access denied, return null instead of throwing
+    if (error.code === 'PGRST116' || error.code === 'PGRST301' || error.message?.includes('No rows') || error.message?.includes('violates row-level security')) {
+      return null;
+    }
+    throw new Error(error.message || "Failed to fetch gig");
+  }
   return gig;
 }
 
@@ -56,7 +54,7 @@ export async function updateGig(gigId: string, data: GigUpdate) {
   // Get current gig to check if key details changed
   const { data: currentGig } = await supabase
     .from("gigs")
-    .select("date, start_time, end_time, location_name, location_address, title, project_id")
+    .select("date, start_time, end_time, location_name, location_address, title")
     .eq("id", gigId)
     .single();
 
@@ -97,7 +95,6 @@ export async function updateGig(gigId: string, data: GigUpdate) {
           message: 'Date, time, or location has changed. Check the details!',
           link_url: `/gigs/${gigId}/pack`,
           gig_id: gigId,
-          project_id: currentGig.project_id,
         });
       }
     }
@@ -114,7 +111,6 @@ export async function deleteGig(gigId: string) {
     .from("gigs")
     .select(`
       title,
-      project_id,
       gig_roles!inner (
         musician_id,
         invitation_status
@@ -136,7 +132,6 @@ export async function deleteGig(gigId: string) {
             title: `Gig cancelled: ${gig.title}`,
             message: 'This gig has been cancelled',
             link_url: `/dashboard`,
-            project_id: gig.project_id,
           });
         }
       }
@@ -157,11 +152,12 @@ export async function listGigsAsPlayer(userId: string) {
 
   // Get gigs where user has a gig_role (is invited as musician)
   // Exclude roles with 'pending' status (not yet officially invited)
+  // Exclude roles with 'declined' status (player declined)
   const { data: gigs, error } = await supabase
     .from("gigs")
     .select(`
       *,
-      projects (
+      owner:profiles!gigs_owner_id_fkey (
         id,
         name
       ),
@@ -174,6 +170,7 @@ export async function listGigsAsPlayer(userId: string) {
     `)
     .eq("gig_roles.musician_id", userId)
     .neq("gig_roles.invitation_status", "pending")
+    .neq("gig_roles.invitation_status", "declined")
     .gte("date", new Date().toISOString().split('T')[0]) // Only upcoming gigs
     .order("date", { ascending: true })
     .limit(20);
@@ -186,18 +183,17 @@ export async function listGigsAsPlayer(userId: string) {
 export async function listGigsAsManager(userId: string) {
   const supabase = createClient();
 
-  // Get gigs where user owns the project
+  // Get gigs where user is the gig owner
   const { data: gigs, error } = await supabase
     .from("gigs")
     .select(`
       *,
-      projects!inner (
+      owner:profiles!gigs_owner_id_fkey (
         id,
-        name,
-        owner_id
+        name
       )
     `)
-    .eq("projects.owner_id", userId)
+    .eq("owner_id", userId)
     .gte("date", new Date().toISOString().split('T')[0]) // Only upcoming gigs
     .order("date", { ascending: true })
     .limit(20);

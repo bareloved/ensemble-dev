@@ -89,7 +89,6 @@ export function ConflictWarningDialog({
                       <p className="text-sm font-medium text-gray-900">
                         {conflict.gigTitle}
                       </p>
-                      <p className="text-xs text-gray-600">{conflict.projectName}</p>
                     </div>
                     <div className="flex gap-1.5 items-center">
                       {conflict.isManager && (

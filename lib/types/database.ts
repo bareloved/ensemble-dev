@@ -98,6 +98,51 @@ export type Database = {
           },
         ]
       }
+      gig_activity_log: {
+        Row: {
+          activity_type: string
+          created_at: string
+          description: string
+          gig_id: string
+          id: string
+          metadata: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          description: string
+          gig_id: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string
+          gig_id?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_activity_log_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_activity_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gig_files: {
         Row: {
           created_at: string
@@ -183,6 +228,66 @@ export type Database = {
             columns: ["gig_role_id"]
             isOneToOne: false
             referencedRelation: "gig_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gig_readiness: {
+        Row: {
+          charts_ready: boolean
+          created_at: string
+          gear_packed: boolean
+          gig_id: string
+          id: string
+          musician_id: string
+          notes: string | null
+          songs_learned: number
+          songs_total: number
+          sounds_ready: boolean
+          travel_checked: boolean
+          updated_at: string
+        }
+        Insert: {
+          charts_ready?: boolean
+          created_at?: string
+          gear_packed?: boolean
+          gig_id: string
+          id?: string
+          musician_id: string
+          notes?: string | null
+          songs_learned?: number
+          songs_total?: number
+          sounds_ready?: boolean
+          travel_checked?: boolean
+          updated_at?: string
+        }
+        Update: {
+          charts_ready?: boolean
+          created_at?: string
+          gear_packed?: boolean
+          gig_id?: string
+          id?: string
+          musician_id?: string
+          notes?: string | null
+          songs_learned?: number
+          songs_total?: number
+          sounds_ready?: boolean
+          travel_checked?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_readiness_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "gigs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gig_readiness_musician_id_fkey"
+            columns: ["musician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -322,7 +427,7 @@ export type Database = {
           location_address: string | null
           location_name: string | null
           notes: string | null
-          project_id: string
+          owner_id: string
           schedule: string | null
           start_time: string | null
           status: string
@@ -340,7 +445,7 @@ export type Database = {
           location_address?: string | null
           location_name?: string | null
           notes?: string | null
-          project_id: string
+          owner_id: string
           schedule?: string | null
           start_time?: string | null
           status?: string
@@ -358,7 +463,7 @@ export type Database = {
           location_address?: string | null
           location_name?: string | null
           notes?: string | null
-          project_id?: string
+          owner_id?: string
           schedule?: string | null
           start_time?: string | null
           status?: string
@@ -367,10 +472,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "gigs_project_id_fkey"
-            columns: ["project_id"]
+            foreignKeyName: "gigs_owner_id_fkey"
+            columns: ["owner_id"]
             isOneToOne: false
-            referencedRelation: "projects"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -452,7 +557,6 @@ export type Database = {
           id: string
           link_url: string | null
           message: string | null
-          project_id: string | null
           read_at: string | null
           title: string
           type: string
@@ -465,7 +569,6 @@ export type Database = {
           id?: string
           link_url?: string | null
           message?: string | null
-          project_id?: string | null
           read_at?: string | null
           title: string
           type: string
@@ -478,7 +581,6 @@ export type Database = {
           id?: string
           link_url?: string | null
           message?: string | null
-          project_id?: string | null
           read_at?: string | null
           title?: string
           type?: string
@@ -497,13 +599,6 @@ export type Database = {
             columns: ["gig_role_id"]
             isOneToOne: false
             referencedRelation: "gig_roles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notifications_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -546,47 +641,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      projects: {
-        Row: {
-          cover_image_url: string | null
-          created_at: string
-          description: string | null
-          id: string
-          is_personal: boolean | null
-          name: string
-          owner_id: string
-          updated_at: string
-        }
-        Insert: {
-          cover_image_url?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_personal?: boolean | null
-          name: string
-          owner_id: string
-          updated_at?: string
-        }
-        Update: {
-          cover_image_url?: string | null
-          created_at?: string
-          description?: string | null
-          id?: string
-          is_personal?: boolean | null
-          name?: string
-          owner_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "projects_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       setlist_items: {
         Row: {
@@ -632,16 +686,69 @@ export type Database = {
           },
         ]
       }
+      setlist_learning_status: {
+        Row: {
+          created_at: string
+          difficulty: string | null
+          id: string
+          last_practiced_at: string | null
+          learned: boolean
+          musician_id: string
+          notes: string | null
+          practice_count: number
+          priority: string | null
+          setlist_item_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          difficulty?: string | null
+          id?: string
+          last_practiced_at?: string | null
+          learned?: boolean
+          musician_id: string
+          notes?: string | null
+          practice_count?: number
+          priority?: string | null
+          setlist_item_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          difficulty?: string | null
+          id?: string
+          last_practiced_at?: string | null
+          learned?: boolean
+          musician_id?: string
+          notes?: string | null
+          practice_count?: number
+          priority?: string | null
+          setlist_item_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "setlist_learning_status_musician_id_fkey"
+            columns: ["musician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "setlist_learning_status_setlist_item_id_fkey"
+            columns: ["setlist_item_id"]
+            isOneToOne: false
+            referencedRelation: "setlist_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       expire_old_invitations: { Args: never; Returns: undefined }
-      fn_can_insert_gig: {
-        Args: { check_owner_id: string; check_project_id: string }
-        Returns: boolean
-      }
       fn_can_update_gig_role: {
         Args: {
           check_gig_id: string
@@ -652,13 +759,13 @@ export type Database = {
       }
       fn_is_gig_musician: { Args: { check_gig_id: string }; Returns: boolean }
       fn_is_gig_owner: { Args: { check_gig_id: string }; Returns: boolean }
-      fn_is_project_owner: {
-        Args: { check_project_id: string }
-        Returns: boolean
-      }
-      fn_is_project_participant: {
-        Args: { check_project_id: string }
-        Returns: boolean
+      get_user_activity_since: {
+        Args: { p_since: string; p_user_id: string }
+        Returns: {
+          activity_type: string
+          created_at: string
+          id: string
+        }[]
       }
     }
     Enums: {

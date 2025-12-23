@@ -5,12 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  FolderKanban,
   DollarSign,
   User,
   LogOut,
-  ChevronRight,
-  Plus,
   Users,
   History,
   Calendar,
@@ -29,9 +26,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
@@ -44,18 +38,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/providers/user-provider";
 import { getInitials, getUserDisplayName } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
-import { listUserProjects } from "@/lib/api/projects";
 
 // Menu items (non-projects, non-dashboard, non-my-circle)
 // Order: All Gigs, Money, Calendar, History
@@ -86,39 +72,6 @@ export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, profile } = useUser();
-
-  // Fetch user's projects
-  const { data: projects = [], isLoading: isProjectsLoading } = useQuery({
-    queryKey: ["projects", user?.id],
-    queryFn: listUserProjects,
-    enabled: !!user,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-
-  // Fetch gig counts for all projects
-  const { data: gigCounts = {} } = useQuery({
-    queryKey: ["project-gig-counts", user?.id],
-    queryFn: async () => {
-      const supabase = createClient();
-      const counts: Record<string, number> = {};
-      
-      // Fetch gig counts for all user projects
-      for (const project of projects) {
-        const { count, error } = await supabase
-          .from("gigs")
-          .select("*", { count: "exact", head: true })
-          .eq("project_id", project.id);
-        
-        if (!error && count !== null) {
-          counts[project.id] = count;
-        }
-      }
-      
-      return counts;
-    },
-    enabled: !!user && projects.length > 0,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -214,76 +167,6 @@ export function AppSidebar() {
 
               {/* Divider */}
               <SidebarSeparator />
-
-              {/* Projects - Collapsible */}
-              <Collapsible defaultOpen className="group/collapsible">
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton 
-                      isActive={pathname.startsWith("/projects")}
-                      tooltip="Projects"
-                    >
-                      <FolderKanban />
-                      <span>Projects</span>
-                      <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {isProjectsLoading ? (
-                        // Loading state
-                        <>
-                          <SidebarMenuSubItem>
-                            <Skeleton className="h-8 w-full" />
-                          </SidebarMenuSubItem>
-                          <SidebarMenuSubItem>
-                            <Skeleton className="h-8 w-full" />
-                          </SidebarMenuSubItem>
-                        </>
-                      ) : projects.length === 0 ? (
-                        // Empty state
-                        <SidebarMenuSubItem>
-                          <SidebarMenuSubButton asChild>
-                            <Link href="/projects">
-                              <Plus className="h-4 w-4" />
-                              <span className="text-muted-foreground">Create project</span>
-                            </Link>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ) : (
-                        // Projects list
-                        <>
-                          {projects.map((project) => (
-                            <SidebarMenuSubItem key={project.id}>
-                              <SidebarMenuSubButton 
-                                asChild
-                                isActive={pathname === `/projects/${project.id}`}
-                              >
-                                <Link href={`/projects/${project.id}`} className="flex items-center justify-between w-full">
-                                  <span>{project.name}</span>
-                                  {gigCounts[project.id] !== undefined && (
-                                    <span className="ml-auto text-xs text-muted-foreground">
-                                      {gigCounts[project.id]}
-                                    </span>
-                                  )}
-                                </Link>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
-                          {/* View all projects */}
-                          <SidebarMenuSubItem>
-                            <SidebarMenuSubButton asChild size="sm">
-                              <Link href="/projects">
-                                <span>View all</span>
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        </>
-                      )}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

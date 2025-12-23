@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calendar, MapPin, Package, Users, Briefcase, Music, MoreVertical, Check, X, User, Crown, Mail } from "lucide-react";
+import { Calendar, MapPin, Package, Briefcase, MoreVertical, Check, X, Crown, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useUser } from "@/lib/providers/user-provider";
@@ -113,12 +113,12 @@ export function DashboardGigItemGrid({ gig, isPastGig = false, returnUrl = "/das
             {gig.isManager ? (
               <Badge variant="outline" className="gap-1 text-xs bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-950 dark:border-orange-800 dark:text-orange-300">
                 <Crown className="h-3 w-3" />
-                Hosted by You
+                You
               </Badge>
             ) : gig.hostName ? (
               <Badge variant="outline" className="gap-1 text-xs bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-300">
                 <Mail className="h-3 w-3" />
-                Hosted by {gig.hostName}
+                {gig.hostName}
               </Badge>
             ) : null}
             {/* Gig Status */}
@@ -131,12 +131,6 @@ export function DashboardGigItemGrid({ gig, isPastGig = false, returnUrl = "/das
         {/* Title and Project */}
         <div className="space-y-1">
           <h3 className="font-semibold text-base line-clamp-2">{gig.gigTitle}</h3>
-          {gig.projectName && !gig.projectName.includes("My Gigs") && (
-            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Music className="h-3.5 w-3.5 flex-shrink-0" />
-              <span className="truncate">{gig.projectName}</span>
-            </div>
-          )}
           
           {/* Invitation Summary (Host-only meta) */}
           {gig.isManager && gig.roleStats && gig.roleStats.total > 0 && (
