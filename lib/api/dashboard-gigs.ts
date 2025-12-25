@@ -60,7 +60,7 @@ export async function listDashboardGigs(
       end_time,
       location_name,
       status,
-      owner:profiles(
+      owner:profiles!gigs_owner_profiles_fkey(
         id,
         name
       ),
@@ -208,7 +208,7 @@ export async function listRecentPastGigs(
       end_time,
       location_name,
       status,
-      owner:profiles(
+      owner:profiles!gigs_owner_profiles_fkey(
         id,
         name
       ),
@@ -311,7 +311,7 @@ export async function listAllPastGigs(
       end_time,
       location_name,
       status,
-      owner:profiles(
+      owner:profiles!gigs_owner_profiles_fkey(
         id,
         name
       ),

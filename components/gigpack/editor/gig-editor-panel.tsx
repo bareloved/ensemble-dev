@@ -707,6 +707,8 @@ export function GigEditorPanel({
           : null,
         materials: materials.length > 0 ? materials : null,
         schedule: schedule.length > 0 ? schedule : null,
+        // Preserve existing public_slug when editing to keep share links stable
+        public_slug: isEditing && gigPack?.public_slug ? gigPack.public_slug : undefined,
       };
 
       const result = await saveGigPack(gigPackData, isEditing, gigPack?.id);

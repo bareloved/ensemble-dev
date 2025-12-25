@@ -69,6 +69,8 @@ export default function AllGigsPage() {
           end_time,
           location_name,
           status,
+          hero_image_url,
+          gig_type,
           owner:profiles!gigs_owner_profiles_fkey (
             id,
             name
@@ -143,6 +145,8 @@ export default function AllGigsPage() {
             paymentStatus,
             hostId: gig.owner_id,
             hostName,
+            heroImageUrl: gig.hero_image_url || null,
+            gigType: gig.gig_type || null,
           };
         });
 

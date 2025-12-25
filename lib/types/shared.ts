@@ -316,6 +316,8 @@ export interface DashboardGig {
   paymentStatus?: "paid" | "unpaid" | null;
   hostId: string | null;
   hostName: string | null;
+  heroImageUrl?: string | null;
+  gigType?: string | null;
   // Role statistics (for managers)
   roleStats?: {
     total: number;

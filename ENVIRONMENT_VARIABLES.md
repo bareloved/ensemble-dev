@@ -8,12 +8,18 @@ This document lists all environment variables needed for the Ensemble app to run
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 ```
 
 **Where to find these:**
 1. Go to your Supabase project dashboard
 2. Click on "Settings" > "API"
 3. Copy the "Project URL" and "anon public" key
+4. Copy the "service_role" key (⚠️ Keep this secret! Only for server-side use)
+
+**Note:** The `SUPABASE_SERVICE_ROLE_KEY` is required for:
+- Public GigPack sharing (bypasses RLS to show gigs to anyone with a share link)
+- Server-side operations that need admin access
 
 ## Optional Variables (Features Will Be Disabled Without These)
 

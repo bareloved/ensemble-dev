@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calendar, MapPin, Package, Briefcase, MoreVertical, Check, X, Crown, Mail } from "lucide-react";
+import { Calendar, MapPin, Package, Briefcase, MoreVertical, Check, X, Crown, Mail, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useUser } from "@/lib/providers/user-provider";
@@ -29,6 +29,9 @@ import {
 } from "@/hooks/use-gig-mutations";
 import { checkGigConflicts } from "@/lib/api/calendar";
 import { ConflictWarningDialog } from "@/components/dashboard/conflict-warning";
+import { GigPackShareDialog } from "@/components/gigpack/gigpack-share-dialog";
+import { createClient } from "@/lib/supabase/client";
+import { getGigFallbackImage } from "@/lib/gigpack/gig-visual-theme";
 
 interface DashboardGigItemGridProps {
   gig: DashboardGig;
@@ -44,6 +47,11 @@ export function DashboardGigItemGrid({ gig, isPastGig = false, returnUrl = "/das
   // Conflict detection state
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [conflicts, setConflicts] = useState<DashboardGig[]>([]);
+  
+  // Share dialog state
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareSlug, setShareSlug] = useState<string | null>(null);
+  const [isLoadingShare, setIsLoadingShare] = useState(false);
 
   // PERFORMANCE: Use optimistic update hooks for instant UI feedback
   const markPaidMutation = useMarkAsPaid();
@@ -87,6 +95,43 @@ export function DashboardGigItemGrid({ gig, isPastGig = false, returnUrl = "/das
     acceptInvitationMutation.mutate(gig.playerGigRoleId!);
   };
 
+  // Handle share button click - fetch public_slug if needed
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (shareSlug) {
+      // Already have the slug, just open the dialog
+      setShareDialogOpen(true);
+      return;
+    }
+    
+    setIsLoadingShare(true);
+    try {
+      const supabase = createClient();
+      const { data: shareData } = await supabase
+        .from("gig_shares")
+        .select("token")
+        .eq("gig_id", gig.gigId)
+        .single();
+      
+      if (shareData?.token) {
+        setShareSlug(shareData.token);
+      } else {
+        // If no share token exists, use the gig ID as fallback
+        setShareSlug(gig.gigId);
+      }
+      setShareDialogOpen(true);
+    } catch (error) {
+      console.error("Error fetching share token:", error);
+      // Fallback to gig ID
+      setShareSlug(gig.gigId);
+      setShareDialogOpen(true);
+    } finally {
+      setIsLoadingShare(false);
+    }
+  };
+
   // Determine which actions to show
   const showPlayerActions = gig.isPlayer && gig.playerGigRoleId;
   const showPaymentActions = showPlayerActions && gig.paymentStatus;
@@ -96,38 +141,54 @@ export function DashboardGigItemGrid({ gig, isPastGig = false, returnUrl = "/das
   // Determine gig URL based on ownership - managers see full detail, players see pack
   const gigUrl = gig.isManager ? `/gigs/${gig.gigId}?returnUrl=${returnUrl}` : `/gigs/${gig.gigId}/pack?returnUrl=${returnUrl}`;
 
+  // Get hero image - use fallback if no custom image
+  const heroImage = gig.heroImageUrl || getGigFallbackImage(
+    { 
+      title: gig.gigTitle, 
+      venue_name: gig.locationName,
+      gig_type: gig.gigType || null
+    }, 
+    gig.gigId
+  );
+
   return (
     <>
-    <Card className={`p-4 hover:bg-muted/50 transition-colors group h-full flex flex-col ${isPastGig ? 'opacity-70 saturate-75' : ''}`}>
-      <Link href={gigUrl} className="flex-1 flex flex-col space-y-3">
-        {/* Header with Date and Status */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-col items-center bg-primary/10 rounded-lg p-2 min-w-[50px]">
-            <span className="text-xs text-muted-foreground uppercase">
-              {format(gigDate, "MMM")}
-            </span>
-            <span className="text-xl font-bold">{format(gigDate, "d")}</span>
-          </div>
-          <div className="flex flex-col gap-2 items-end">
-            {/* Host Badge */}
-            {gig.isManager ? (
-              <Badge variant="outline" className="gap-1 text-xs bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-950 dark:border-orange-800 dark:text-orange-300">
-                <Crown className="h-3 w-3" />
-                You
-              </Badge>
-            ) : gig.hostName ? (
-              <Badge variant="outline" className="gap-1 text-xs bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-300">
-                <Mail className="h-3 w-3" />
-                {gig.hostName}
-              </Badge>
-            ) : null}
-            {/* Gig Status */}
-            {gig.status && (
-              <GigStatusBadge status={gig.status} className="text-xs" />
-            )}
-          </div>
+    <Card className={`overflow-hidden hover:bg-muted/50 transition-colors group h-full flex flex-col ${isPastGig ? 'opacity-70 saturate-75' : ''}`}>
+      {/* Hero Image - always show with fallback */}
+      <Link href={gigUrl} className="block relative w-full h-32 overflow-hidden">
+        <img 
+          src={heroImage} 
+          alt={gig.gigTitle}
+          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+        />
+        {/* Date overlay on image */}
+        <div className="absolute top-2 left-2 flex flex-col items-center bg-background/90 backdrop-blur-sm rounded-lg p-2 min-w-[50px] shadow-sm">
+          <span className="text-xs text-muted-foreground uppercase">
+            {format(gigDate, "MMM")}
+          </span>
+          <span className="text-xl font-bold">{format(gigDate, "d")}</span>
         </div>
-
+        {/* Status overlay */}
+        <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+          {gig.isManager ? (
+            <Badge variant="outline" className="gap-1 text-xs bg-orange-50/90 border-orange-200 text-orange-700 dark:bg-orange-950/90 dark:border-orange-800 dark:text-orange-300 backdrop-blur-sm">
+              <Crown className="h-3 w-3" />
+              You
+            </Badge>
+          ) : gig.hostName ? (
+            <Badge variant="outline" className="gap-1 text-xs bg-blue-50/90 border-blue-200 text-blue-700 dark:bg-blue-950/90 dark:border-blue-800 dark:text-blue-300 backdrop-blur-sm">
+              <Mail className="h-3 w-3" />
+              {gig.hostName}
+            </Badge>
+          ) : null}
+          {gig.status && (
+            <GigStatusBadge status={gig.status} className="text-xs" />
+          )}
+        </div>
+      </Link>
+      
+      <div className="p-4 flex-1 flex flex-col">
+      <Link href={gigUrl} className="flex-1 flex flex-col space-y-3">
         {/* Title and Project */}
         <div className="space-y-1">
           <h3 className="font-semibold text-base line-clamp-2">{gig.gigTitle}</h3>
@@ -227,6 +288,20 @@ export function DashboardGigItemGrid({ gig, isPastGig = false, returnUrl = "/das
             </Button>
           </Link>
         )}
+        
+        {/* Share Button (only for hosts) */}
+        {gig.isManager && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-2"
+            onClick={handleShare}
+            disabled={isLoadingShare}
+          >
+            <Share2 className={`h-4 w-4 ${isLoadingShare ? 'animate-pulse' : ''}`} />
+            Share
+          </Button>
+        )}
 
         {/* Quick Actions Dropdown */}
         {(showPlayerActions || showManagerActions) && (
@@ -298,6 +373,7 @@ export function DashboardGigItemGrid({ gig, isPastGig = false, returnUrl = "/das
           </DropdownMenu>
         )}
       </div>
+      </div>
     </Card>
 
     {/* Conflict Warning Dialog */}
@@ -312,6 +388,23 @@ export function DashboardGigItemGrid({ gig, isPastGig = false, returnUrl = "/das
       onCancel={() => setShowConflictDialog(false)}
       isLoading={acceptInvitationMutation.isPending}
     />
+    
+    {/* Share Dialog */}
+    {gig.isManager && (
+      <GigPackShareDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        gigPack={{
+          id: gig.gigId,
+          title: gig.gigTitle,
+          band_name: null,
+          date: gig.date,
+          venue_name: gig.locationName || null,
+          public_slug: shareSlug || gig.gigId,
+        }}
+        locale="en"
+      />
+    )}
     </>
   );
 }

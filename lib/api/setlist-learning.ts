@@ -220,14 +220,14 @@ export async function getPracticeItems(
       tempo,
       sort_order,
       setlist_sections!inner (
-        gig_id,
-        gigs!inner (
-          id,
-          title,
-          date,
-          owner_id,
+      gig_id,
+      gigs!inner (
+        id,
+        title,
+        date,
+        owner_id,
           owner:profiles!gigs_owner_profiles_fkey (
-            name
+          name
           )
         )
       )

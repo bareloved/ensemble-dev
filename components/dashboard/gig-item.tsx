@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calendar, MapPin, Package, Briefcase, MoreVertical, Check, X, Crown, Mail } from "lucide-react";
+import { Calendar, MapPin, Package, Briefcase, MoreVertical, Check, X, Crown, Mail, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useUser } from "@/lib/providers/user-provider";
@@ -29,6 +29,8 @@ import {
 } from "@/hooks/use-gig-mutations";
 import { checkGigConflicts } from "@/lib/api/calendar";
 import { ConflictWarningDialog } from "@/components/dashboard/conflict-warning";
+import { GigPackShareDialog } from "@/components/gigpack/gigpack-share-dialog";
+import { createClient } from "@/lib/supabase/client";
 
 interface DashboardGigItemProps {
   gig: DashboardGig;
@@ -44,6 +46,11 @@ export function DashboardGigItem({ gig, isPastGig = false, returnUrl = "/dashboa
   // Conflict detection state
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [conflicts, setConflicts] = useState<DashboardGig[]>([]);
+  
+  // Share dialog state
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareSlug, setShareSlug] = useState<string | null>(null);
+  const [isLoadingShare, setIsLoadingShare] = useState(false);
 
   // PERFORMANCE: Use optimistic update hooks for instant UI feedback
   const markPaidMutation = useMarkAsPaid();
@@ -83,6 +90,40 @@ export function DashboardGigItem({ gig, isPastGig = false, returnUrl = "/dashboa
   const handleAcceptAnyway = () => {
     setShowConflictDialog(false);
     acceptInvitationMutation.mutate(gig.playerGigRoleId!);
+  };
+
+  // Handle share button click - fetch public_slug if needed
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (shareSlug) {
+      setShareDialogOpen(true);
+      return;
+    }
+    
+    setIsLoadingShare(true);
+    try {
+      const supabase = createClient();
+      const { data: shareData } = await supabase
+        .from("gig_shares")
+        .select("token")
+        .eq("gig_id", gig.gigId)
+        .single();
+      
+      if (shareData?.token) {
+        setShareSlug(shareData.token);
+      } else {
+        setShareSlug(gig.gigId);
+      }
+      setShareDialogOpen(true);
+    } catch (error) {
+      console.error("Error fetching share token:", error);
+      setShareSlug(gig.gigId);
+      setShareDialogOpen(true);
+    } finally {
+      setIsLoadingShare(false);
+    }
   };
 
   // Determine which actions to show
@@ -229,6 +270,20 @@ export function DashboardGigItem({ gig, isPastGig = false, returnUrl = "/dashboa
                 </Button>
               </Link>
             )}
+            
+            {/* Share Button (only for hosts) */}
+            {gig.isManager && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2"
+                onClick={handleShare}
+                disabled={isLoadingShare}
+              >
+                <Share2 className={`h-4 w-4 ${isLoadingShare ? 'animate-pulse' : ''}`} />
+                Share
+              </Button>
+            )}
 
             {/* Quick Actions Dropdown */}
             {(showPlayerActions || showManagerActions) && (
@@ -316,6 +371,23 @@ export function DashboardGigItem({ gig, isPastGig = false, returnUrl = "/dashboa
       onCancel={() => setShowConflictDialog(false)}
       isLoading={acceptInvitationMutation.isPending}
     />
+    
+    {/* Share Dialog */}
+    {gig.isManager && (
+      <GigPackShareDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        gigPack={{
+          id: gig.gigId,
+          title: gig.gigTitle,
+          band_name: null,
+          date: gig.date,
+          venue_name: gig.locationName || null,
+          public_slug: shareSlug || gig.gigId,
+        }}
+        locale="en"
+      />
+    )}
     </>
   );
 }

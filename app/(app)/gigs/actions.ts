@@ -111,9 +111,23 @@ export async function saveGigPack(
   }
 
   let finalGigId: string | undefined = gigId;
+  // For existing gigs, use the provided slug. Only generate new slug for new gigs.
   let publicSlug = data.public_slug || "";
 
   try {
+    // For existing gigs, fetch the current slug if not provided
+    if (isEditing && gigId && !publicSlug) {
+      const { data: existingShare } = await supabase
+        .from("gig_shares")
+        .select("token")
+        .eq("gig_id", gigId)
+        .single();
+      
+      if (existingShare?.token) {
+        publicSlug = existingShare.token;
+      }
+    }
+
     // Convert date string to full ISO timestamp if provided
     let dateValue: string | undefined = undefined;
     if (data.date) {

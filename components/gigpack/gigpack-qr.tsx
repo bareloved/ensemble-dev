@@ -19,4 +19,3 @@ export function GigPackQr({ url, size = 200 }: GigPackQrProps) {
     </div>
   );
 }
-

@@ -1,14 +1,16 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, ArrowLeft, Edit, Share2 } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Edit, Share2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { getGigPackFull } from '@/lib/api/gig-pack';
 import { useUser } from '@/lib/providers/user-provider';
 import { MinimalLayout } from '@/components/gigpack/layouts/minimal-layout';
+import { GigPackShareDialog } from '@/components/gigpack/gigpack-share-dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { GigPack } from '@/lib/gigpack/types';
 
@@ -16,16 +18,95 @@ export default function GigPackPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const gigId = params.id as string;
   const returnUrl = searchParams.get('returnUrl') || '/dashboard';
   const { user } = useUser();
+  
+  // Share dialog state
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  
+  // Smart polling state
+  const [isUserActive, setIsUserActive] = useState(true);
+  const [isPolling, setIsPolling] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  const { data: gigPack, isLoading, error } = useQuery({
+  const { data: gigPack, isLoading, error, refetch } = useQuery({
     queryKey: ['gig-pack-full', gigId],
     queryFn: () => getGigPackFull(gigId),
     enabled: !!gigId,
-    staleTime: 1 * 60 * 1000, // 1 minute
+    staleTime: 5 * 1000, // 5 seconds - data is considered stale quickly for live updates
   });
+
+  // Smart polling for live updates
+  const poll = useCallback(async () => {
+    if (!isUserActive || document.hidden || !gigId) return;
+    
+    setIsPolling(true);
+    try {
+      const res = await fetch(`/api/gig/${gigId}/pack`);
+      if (res.ok) {
+        const newData = await res.json();
+        // Compare updated_at to detect changes
+        if (newData.updated_at !== gigPack?.updated_at) {
+          // Invalidate and refetch to update the cache
+          queryClient.setQueryData(['gig-pack-full', gigId], newData);
+          setLastUpdated(new Date());
+        }
+      }
+    } catch (error) {
+      console.error("Error polling gig pack:", error);
+    } finally {
+      setIsPolling(false);
+    }
+  }, [gigId, gigPack?.updated_at, isUserActive, queryClient]);
+
+  // Set up smart polling with activity detection
+  useEffect(() => {
+    let activityTimeout: NodeJS.Timeout;
+    let pollInterval: NodeJS.Timeout;
+
+    const resetActivityTimeout = () => {
+      setIsUserActive(true);
+      clearTimeout(activityTimeout);
+      // Mark user as idle after 30 seconds of no activity
+      activityTimeout = setTimeout(() => {
+        setIsUserActive(false);
+      }, 30000);
+    };
+
+    // Start with active state
+    resetActivityTimeout();
+
+    // Set up activity listeners
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    activityEvents.forEach(event => {
+      document.addEventListener(event, resetActivityTimeout, { passive: true });
+    });
+
+    // Poll immediately when becoming visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        resetActivityTimeout();
+        poll();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Set polling interval based on activity state
+    // Poll every 10 seconds when active, every 60 seconds when idle
+    const intervalTime = isUserActive && !document.hidden ? 10000 : 60000;
+    pollInterval = setInterval(poll, intervalTime);
+
+    return () => {
+      clearInterval(pollInterval);
+      clearTimeout(activityTimeout);
+      activityEvents.forEach(event => {
+        document.removeEventListener(event, resetActivityTimeout);
+      });
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [poll, isUserActive]);
 
   if (!user) {
     return (
@@ -97,7 +178,12 @@ export default function GigPackPage() {
                   Edit
                 </Button>
               </Link>
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2"
+                onClick={() => setShareDialogOpen(true)}
+              >
                 <Share2 className="h-4 w-4" />
                 Share
               </Button>
@@ -111,6 +197,45 @@ export default function GigPackPage() {
         gigPack={gigPack as Omit<GigPack, "internal_notes" | "owner_id">} 
         openMaps={openMaps} 
         slug={gigPack.public_slug || gigId}
+        locale="en"
+      />
+      
+      {/* Live status indicator */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <div className="bg-card border rounded-lg shadow-lg px-3 py-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <RefreshCw 
+            className={`h-3 w-3 transition-all ${
+              isPolling 
+                ? 'animate-spin text-primary' 
+                : isUserActive 
+                  ? 'text-green-500' 
+                  : 'text-orange-500'
+            }`} 
+          />
+          <span className="hidden sm:inline">
+            {isUserActive ? 'Live' : 'Idle'} • Updated {lastUpdated.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit'
+            })}
+          </span>
+          <span className="sm:hidden">
+            {isUserActive ? '🟢' : '🟠'}
+          </span>
+        </div>
+      </div>
+      
+      {/* Share Dialog */}
+      <GigPackShareDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        gigPack={{
+          id: gigPack.id,
+          title: gigPack.title,
+          band_name: gigPack.band_name,
+          date: gigPack.date,
+          venue_name: gigPack.venue_name,
+          public_slug: gigPack.public_slug || gigId,
+        }}
         locale="en"
       />
     </div>
