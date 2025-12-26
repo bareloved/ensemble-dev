@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useTranslations } from "@/hooks/use-translations";
 import { Band } from "@/lib/types/gigpack";
 import { Button } from "@/components/ui/button";
@@ -132,8 +133,8 @@ export default function BandsClientPage({ initialBands }: BandsClientPageProps) 
             {t("pageDescription")}
           </p>
         </div>
-        <Button 
-          onClick={handleCreateNew} 
+        <Button
+          onClick={handleCreateNew}
           size="lg"
           className="sm:w-auto shadow-lg hover:shadow-xl transition-shadow"
         >
@@ -173,16 +174,20 @@ export default function BandsClientPage({ initialBands }: BandsClientPageProps) 
               {/* Band Logo/Hero */}
               <div className="relative aspect-video bg-muted">
                 {band.hero_image_url ? (
-                  <img
+                  <Image
                     src={band.hero_image_url}
                     alt={band.name}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                 ) : band.band_logo_url ? (
-                  <div className="flex items-center justify-center h-full">
-                    <img
+                  <div className="flex items-center justify-center h-full relative">
+                    <Image
                       src={band.band_logo_url}
                       alt={band.name}
+                      width={200}
+                      height={100}
                       className="max-h-24 max-w-[80%] object-contain"
                     />
                   </div>

@@ -44,7 +44,16 @@ export default async function BandsPage({
       );
     }
 
-    return <BandsClientPage initialBands={bands as Band[]} />;
+    // Map database fields to Band interface
+    const mappedBands: Band[] = (bands || []).map((b: any) => ({
+      ...b,
+      hero_image_url: b.hero_image_url || b.cover_image_url || null,
+      accent_color: b.accent_color || null,
+      poster_skin: b.poster_skin || "clean", // Default to clean if missing
+      default_lineup: b.default_lineup || [],
+    }));
+
+    return <BandsClientPage initialBands={mappedBands} />;
   } catch (err) {
     console.error("Unexpected error in BandsPage:", err);
     return (

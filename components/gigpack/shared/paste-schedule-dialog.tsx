@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Clock, AlertCircle, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { parseScheduleText, createScheduleItems, ParsedScheduleItem, ParsingError } from "@/lib/schedule-parser";
-import { GigScheduleItem } from "@/lib/types";
+import { GigScheduleItem } from "@/lib/gigpack/types";
 
 interface PasteScheduleDialogProps {
   open: boolean;

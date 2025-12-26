@@ -30,9 +30,9 @@ export interface SetlistSection {
   songs: SetlistSong[];
 }
 
-export type GigPackTheme = "minimal" | "vintage_poster" | "social_card";
+export type GigPackTheme = "minimal";
 
-export type PosterSkin = "clean" | "paper" | "grain";
+export type PosterSkin = "clean" | "paper" | "grain"; // Deprecated, kept for backward compatibility
 
 // Band Types (Mapped to Ensemble Projects)
 export interface Band {
@@ -89,7 +89,9 @@ export type PackingChecklistState = {
 export interface GigPack {
   id: string;
   owner_id: string;
+  owner_name?: string | null; // Added for display
   title: string;
+  status: string | null; // Added for display
   band_id: string | null; // project_id
   band_name: string | null; // project name (joined)
   date: string | null;
@@ -160,3 +162,12 @@ export interface UserTemplate {
 
 export type UserTemplateInsert = Omit<UserTemplate, "id" | "created_at" | "updated_at">;
 export type UserTemplateUpdate = Partial<Omit<UserTemplate, "id" | "owner_id" | "created_at">>;
+
+export interface SetlistData {
+  title?: string;
+  location?: string;
+  date?: string;
+  lines: string[];
+  options?: any;
+  locale?: string;
+}

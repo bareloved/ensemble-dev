@@ -8,7 +8,7 @@ import { classifyGigVisualTheme, pickFallbackImageForTheme } from "@/lib/gig-vis
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { GigPackListItem } from "@/app/[locale]/gigpacks/client-page";
-import type { GigPack, Band } from "@/lib/types";
+import type { GigPack, Band } from "@/lib/gigpack/types";
 
 // Global cache for band data to avoid duplicate fetches
 const bandCache = new Map<string, Band>();

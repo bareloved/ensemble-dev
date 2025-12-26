@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { PackingChecklistItem, PackingChecklistState } from "@/lib/types";
+import { PackingChecklistItem, PackingChecklistState } from "@/lib/gigpack/types";
 import { CheckSquare } from "lucide-react";
 
 interface PackingChecklistProps {

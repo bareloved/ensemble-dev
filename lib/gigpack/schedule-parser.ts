@@ -1,4 +1,4 @@
-import { GigScheduleItem } from "@/lib/types";
+import { GigScheduleItem } from "@/lib/gigpack/types";
 
 // Types for parsing results
 export interface ParsedScheduleItem {

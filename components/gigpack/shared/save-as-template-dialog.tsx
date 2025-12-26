@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { createUserTemplate, extractFormValuesToTemplateDefaults } from "@/lib/userTemplates";
-import { GigPackTemplateDefaultValues, PackingChecklistItem, SetlistSection } from "@/lib/types";
+import { GigPackTemplateDefaultValues, PackingChecklistItem, SetlistSection } from "@/lib/gigpack/types";
 import { Loader2, Save } from "lucide-react";
 
 // Common emoji icons for templates

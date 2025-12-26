@@ -51,13 +51,6 @@ export async function getGig(gigId: string) {
 export async function updateGig(gigId: string, data: GigUpdate) {
   const supabase = createClient();
 
-  // Get current gig to check if key details changed
-  const { data: currentGig } = await supabase
-    .from("gigs")
-    .select("date, start_time, end_time, location_name, location_address, title")
-    .eq("id", gigId)
-    .single();
-
   const { data: gig, error } = await supabase
     .from("gigs")
     .update(data)
@@ -66,40 +59,7 @@ export async function updateGig(gigId: string, data: GigUpdate) {
     .single();
 
   if (error) throw new Error(error.message || "Failed to update gig");
-  
-  // Check if important details changed (date, time, or location)
-  const importantFieldsChanged = currentGig && (
-    (data.date && data.date !== currentGig.date) ||
-    (data.start_time && data.start_time !== currentGig.start_time) ||
-    (data.end_time && data.end_time !== currentGig.end_time) ||
-    (data.location_name && data.location_name !== currentGig.location_name) ||
-    (data.location_address && data.location_address !== currentGig.location_address)
-  );
-  
-  // If important fields changed, notify all musicians who have been invited (not pending)
-  if (importantFieldsChanged) {
-    const { data: roles } = await supabase
-      .from('gig_roles')
-      .select('musician_id')
-      .eq('gig_id', gigId)
-      .neq('invitation_status', 'pending') // Don't notify pending roles (not yet invited)
-      .not('musician_id', 'is', null);
-    
-    if (roles && roles.length > 0) {
-      // Send notifications to all invited musicians
-      for (const role of roles) {
-        await createNotification({
-          user_id: role.musician_id!,
-          type: 'gig_updated',
-          title: `Gig updated: ${currentGig.title}`,
-          message: 'Date, time, or location has changed. Check the details!',
-          link_url: `/gigs/${gigId}/pack`,
-          gig_id: gigId,
-        });
-      }
-    }
-  }
-  
+
   return gig;
 }
 
@@ -119,7 +79,7 @@ export async function deleteGig(gigId: string) {
     .eq("id", gigId)
     .neq("gig_roles.invitation_status", "pending") // Only notify invited musicians (not pending)
     .single();
-  
+
   // Notify all invited musicians before deleting
   if (gig) {
     const roles = gig.gig_roles as any[];
@@ -131,7 +91,7 @@ export async function deleteGig(gigId: string) {
             type: 'gig_cancelled',
             title: `Gig cancelled: ${gig.title}`,
             message: 'This gig has been cancelled',
-            link_url: `/dashboard`,
+            link: `/dashboard`,
           });
         }
       }

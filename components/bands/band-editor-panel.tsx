@@ -266,7 +266,7 @@ export function BandEditorPanel({
         default_lineup: defaultLineup,
       };
 
-      let savedBand: Band;
+      let rawData: any;
 
       if (isEditing) {
         // Update existing band
@@ -278,7 +278,7 @@ export function BandEditorPanel({
           .single();
 
         if (error) throw error;
-        savedBand = data;
+        rawData = data;
       } else {
         // Create new band
         const { data, error } = await supabase
@@ -288,8 +288,16 @@ export function BandEditorPanel({
           .single();
 
         if (error) throw error;
-        savedBand = data;
+        rawData = data;
       }
+
+      const savedBand = {
+        ...rawData,
+        hero_image_url: rawData.hero_image_url || rawData.cover_image_url || null,
+        accent_color: rawData.accent_color || null,
+        poster_skin: rawData.poster_skin || "clean",
+        default_lineup: rawData.default_lineup || [],
+      };
 
       setJustSaved(true);
       setTimeout(() => setJustSaved(false), 2000);

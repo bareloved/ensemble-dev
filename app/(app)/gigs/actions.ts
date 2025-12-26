@@ -4,14 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { generateSlug } from "@/lib/gigpack/utils";
 import { GigPack, LineupMember, GigScheduleItem, GigMaterial, PackingChecklistItem, SetlistSection, GigPackTheme, PosterSkin } from "@/lib/gigpack/types";
+import { createNotification } from "@/lib/api/notifications";
 
 export async function getGig(id: string): Promise<GigPack | null> {
   const supabase = await createClient();
-  
+
   const { data: gig, error } = await supabase
     .from("gigs")
     .select(`
       *,
+      owner:profiles!gigs_owner_profiles_fkey(name),
       gig_roles(*),
       gig_schedule_items(*),
       gig_materials(*),
@@ -31,12 +33,14 @@ export async function getGig(id: string): Promise<GigPack | null> {
   const gigPack: GigPack = {
     id: gig.id,
     owner_id: gig.owner_id || "",
+    owner_name: (gig.owner as any)?.name || null,
     title: gig.title,
+    status: gig.status || "active",
     band_id: gig.project_id,
     band_name: gig.band_name,
     date: gig.date ? gig.date.split('T')[0] : null, // Extract date portion from ISO timestamp
     call_time: gig.call_time,
-    on_stage_time: gig.on_stage_time,
+    on_stage_time: gig.on_stage_time || gig.start_time, // Fallback to start_time for migration
     venue_name: gig.location_name || gig.venue_name,
     venue_address: gig.location_address || gig.venue_address,
     venue_maps_url: gig.venue_maps_url,
@@ -122,7 +126,7 @@ export async function saveGigPack(
         .select("token")
         .eq("gig_id", gigId)
         .single();
-      
+
       if (existingShare?.token) {
         publicSlug = existingShare.token;
       }
@@ -139,6 +143,54 @@ export async function saveGigPack(
       }
     }
 
+    // Check for changes and notify musicians if needed (only when editing)
+    if (isEditing && gigId) {
+      // Fetch current gig state to compare
+      const { data: currentGig } = await supabase
+        .from("gigs")
+        .select("title, date, call_time, on_stage_time, venue_name, location_name, venue_address, location_address")
+        .eq("id", gigId)
+        .single();
+
+      if (currentGig) {
+        const importantFieldsChanged =
+          (data.title && data.title !== currentGig.title) ||
+          (dateValue && new Date(dateValue).toISOString().split('T')[0] !== new Date(currentGig.date).toISOString().split('T')[0]) || // Compare dates only
+          (data.call_time && data.call_time !== currentGig.call_time) ||
+          (data.on_stage_time && data.on_stage_time !== currentGig.on_stage_time) ||
+          (data.venue_name && (data.venue_name !== currentGig.venue_name && data.venue_name !== currentGig.location_name)) ||
+          (data.venue_address && (data.venue_address !== currentGig.venue_address && data.venue_address !== currentGig.location_address));
+
+        if (importantFieldsChanged) {
+          // Fetch invited musicians
+          const { data: roles } = await supabase
+            .from('gig_roles')
+            .select('musician_id')
+            .eq('gig_id', gigId)
+            .neq('invitation_status', 'pending')
+            .not('musician_id', 'is', null);
+
+          if (roles && roles.length > 0) {
+            // Notify each musician
+            const notificationPromises = roles.map(role =>
+              createNotification({
+                user_id: role.musician_id!,
+                type: 'gig_updated',
+                title: `Gig Updated: ${data.title || currentGig.title}`,
+                message: 'Important details (date, time, or location) have changed. Please check the gig pack.',
+                link: `/gigs/${gigId}/pack`, // Assuming this is the correct link for the new pack view, or /p/{slug}
+              })
+            );
+
+            // Execute all notifications (don't await to avoid slowing down the response)
+            Promise.all(notificationPromises).catch(err =>
+              console.error("Failed to send update notifications:", err)
+            );
+          }
+        }
+      }
+    }
+
     // 1. Upsert Gig
     const gigData = {
       title: data.title,
@@ -147,6 +199,7 @@ export async function saveGigPack(
       band_name: data.band_name || null,
       call_time: data.call_time || null,
       on_stage_time: data.on_stage_time || null,
+      start_time: data.on_stage_time || data.call_time || null, // Sync back to legacy column
       location_name: data.venue_name || null,
       venue_name: data.venue_name || null,
       location_address: data.venue_address || null,
@@ -178,7 +231,7 @@ export async function saveGigPack(
         .from("gigs")
         .update(gigData)
         .eq("id", gigId);
-      
+
       if (error) throw error;
       finalGigId = gigId;
     } else {
@@ -187,7 +240,7 @@ export async function saveGigPack(
         .insert(gigData)
         .select("id")
         .single();
-      
+
       if (error) throw error;
       finalGigId = newGig.id;
     }
@@ -196,7 +249,7 @@ export async function saveGigPack(
 
     // 2. Handle Related Items (Delete all and insert new)
     // This is not efficient but safe for full sync logic of the editor.
-    
+
     // Roles / Lineup
     await supabase.from("gig_roles").delete().eq("gig_id", finalGigId);
     if (data.lineup && data.lineup.length > 0) {
@@ -255,7 +308,7 @@ export async function saveGigPack(
     if (data.setlist_structured && data.setlist_structured.length > 0) {
       // Delete existing sections (cascade deletes items)
       await supabase.from("setlist_sections").delete().eq("gig_id", finalGigId);
-      
+
       for (const [sectionIndex, section] of data.setlist_structured.entries()) {
         const { data: sectionData, error: sectionError } = await supabase
           .from("setlist_sections")
@@ -266,7 +319,7 @@ export async function saveGigPack(
           })
           .select("id")
           .single();
-        
+
         if (sectionError || !sectionData) continue;
 
         if (section.songs && section.songs.length > 0) {
@@ -291,7 +344,7 @@ export async function saveGigPack(
         .select("token")
         .eq("gig_id", finalGigId)
         .single();
-      
+
       if (!existingShare) {
         await supabase.from("gig_shares").insert({
           gig_id: finalGigId,
@@ -305,7 +358,7 @@ export async function saveGigPack(
 
     revalidatePath("/gigs");
     revalidatePath(`/gigs/${finalGigId}`);
-    
+
     return { id: finalGigId, publicSlug };
 
   } catch (error) {

@@ -27,10 +27,15 @@ export function DashboardKPICards({ kpis, isLoading }: DashboardKPICardsProps) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => (
           <Card key={i}>
-            <CardContent className="pt-6 pb-5">
-              <Skeleton className="h-8 w-12 mb-2" />
-              <Skeleton className="h-4 w-32 mb-1" />
-              <Skeleton className="h-3 w-24" />
+            <CardContent className="p-4 flex flex-col justify-between h-full">
+              <div className="flex justify-between items-start mb-2">
+                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-4 w-4 rounded-full" />
+              </div>
+              <div>
+                <Skeleton className="h-7 w-16 mb-1" />
+                <Skeleton className="h-3 w-24" />
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -41,76 +46,88 @@ export function DashboardKPICards({ kpis, isLoading }: DashboardKPICardsProps) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {/* Gigs This Week */}
+      {/* Gigs This Week */}
       <Card className="hover:shadow-md transition-shadow">
-        <CardContent className="pt-6 pb-5">
-          <div className="flex items-center gap-2 mb-2">
-            <Calendar className="h-5 w-5 text-primary" />
-            <div className="text-2xl font-bold">{kpis.gigsThisWeek.total}</div>
+        <CardContent className="p-4">
+          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="text-sm font-medium text-muted-foreground">Gigs This Week</div>
+            <Calendar className="h-4 w-4 text-primary" />
           </div>
-          <div className="text-sm text-muted-foreground mt-1">Gigs this week</div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {kpis.gigsThisWeek.hosted > 0 && `${kpis.gigsThisWeek.hosted} hosted`}
-            {kpis.gigsThisWeek.hosted > 0 && kpis.gigsThisWeek.playing > 0 && " • "}
-            {kpis.gigsThisWeek.playing > 0 && `${kpis.gigsThisWeek.playing} playing`}
-            {kpis.gigsThisWeek.total === 0 && "No gigs scheduled"}
+          <div className="flex items-baseline gap-2 mt-1">
+            <div className="text-2xl font-bold">{kpis.gigsThisWeek.total}</div>
+            <div className="text-xs text-muted-foreground truncate">
+              {kpis.gigsThisWeek.hosted > 0 && `${kpis.gigsThisWeek.hosted} hosted`}
+              {kpis.gigsThisWeek.hosted > 0 && kpis.gigsThisWeek.playing > 0 && " • "}
+              {kpis.gigsThisWeek.playing > 0 && `${kpis.gigsThisWeek.playing} playing`}
+              {kpis.gigsThisWeek.total === 0 && "scheduled"}
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Songs to Learn */}
+      {/* Songs to Learn */}
       <Card className="hover:shadow-md transition-shadow">
-        <CardContent className="pt-6 pb-5">
-          <div className="flex items-center gap-2 mb-2">
-            <Music2 className="h-5 w-5 text-blue-500" />
-            <div className="text-2xl font-bold">{kpis.songsToLearn.total}</div>
+        <CardContent className="p-4">
+          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="text-sm font-medium text-muted-foreground">Songs to Learn</div>
+            <Music2 className="h-4 w-4 text-blue-500" />
           </div>
-          <div className="text-sm text-muted-foreground mt-1">Songs to learn</div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {kpis.songsToLearn.acrossGigs > 0
-              ? `across ${kpis.songsToLearn.acrossGigs} gig${kpis.songsToLearn.acrossGigs !== 1 ? "s" : ""}`
-              : "all caught up"}
+          <div className="flex items-baseline gap-2 mt-1">
+            <div className="text-2xl font-bold">{kpis.songsToLearn.total}</div>
+            <div className="text-xs text-muted-foreground truncate">
+              {kpis.songsToLearn.acrossGigs > 0
+                ? `in ${kpis.songsToLearn.acrossGigs} gig${kpis.songsToLearn.acrossGigs !== 1 ? "s" : ""}`
+                : "to learn"}
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Changes Since Last Visit */}
+      {/* Changes Since Last Visit */}
       <Card className="hover:shadow-md transition-shadow">
-        <CardContent className="pt-6 pb-5">
-          <div className="flex items-center gap-2 mb-2">
-            <Bell className="h-5 w-5 text-amber-500" />
-            <div className="text-2xl font-bold">{kpis.changesSinceLastVisit.total}</div>
+        <CardContent className="p-4">
+          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="text-sm font-medium text-muted-foreground">New Activity</div>
+            <Bell className="h-4 w-4 text-amber-500" />
           </div>
-          <div className="text-sm text-muted-foreground mt-1">Changes since last visit</div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {kpis.changesSinceLastVisit.total > 0 ? (
-              <>
-                {kpis.changesSinceLastVisit.breakdown.setlists > 0 &&
-                  `${kpis.changesSinceLastVisit.breakdown.setlists} setlist`}
-                {kpis.changesSinceLastVisit.breakdown.setlists > 0 &&
-                  kpis.changesSinceLastVisit.breakdown.notes > 0 &&
-                  " • "}
-                {kpis.changesSinceLastVisit.breakdown.notes > 0 &&
-                  `${kpis.changesSinceLastVisit.breakdown.notes} notes`}
-              </>
-            ) : (
-              "no updates"
-            )}
+          <div className="flex items-baseline gap-2 mt-1">
+            <div className="text-2xl font-bold">{kpis.changesSinceLastVisit.total}</div>
+            <div className="text-xs text-muted-foreground truncate">
+              {kpis.changesSinceLastVisit.total > 0 ? (
+                <>
+                  {kpis.changesSinceLastVisit.breakdown.setlists > 0 &&
+                    `${kpis.changesSinceLastVisit.breakdown.setlists} setlists`}
+                  {kpis.changesSinceLastVisit.breakdown.setlists > 0 &&
+                    kpis.changesSinceLastVisit.breakdown.notes > 0 &&
+                    ", "}
+                  {kpis.changesSinceLastVisit.breakdown.notes > 0 &&
+                    `${kpis.changesSinceLastVisit.breakdown.notes} notes`}
+                </>
+              ) : (
+                "updates"
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Pending Invitations */}
+      {/* Pending Invitations */}
       <Card className="hover:shadow-md transition-shadow">
-        <CardContent className="pt-6 pb-5">
-          <div className="flex items-center gap-2 mb-2">
-            <Mail className="h-5 w-5 text-purple-500" />
-            <div className="text-2xl font-bold">{kpis.pendingInvitations.total}</div>
+        <CardContent className="p-4">
+          <div className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div className="text-sm font-medium text-muted-foreground">Invitations</div>
+            <Mail className="h-4 w-4 text-purple-500" />
           </div>
-          <div className="text-sm text-muted-foreground mt-1">Pending invitations</div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {kpis.pendingInvitations.total > 0
-              ? "action required"
-              : "all responded"}
+          <div className="flex items-baseline gap-2 mt-1">
+            <div className="text-2xl font-bold">{kpis.pendingInvitations.total}</div>
+            <div className="text-xs text-muted-foreground truncate">
+              {kpis.pendingInvitations.total > 0
+                ? "pending"
+                : "pending"}
+            </div>
           </div>
         </CardContent>
       </Card>

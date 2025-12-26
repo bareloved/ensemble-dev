@@ -1,6 +1,6 @@
 "use client";
 
-import { PackingChecklistItem } from "@/lib/types";
+import { PackingChecklistItem } from "@/lib/gigpack/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, X, ChevronUp, ChevronDown, CheckSquare } from "lucide-react";

@@ -11,7 +11,7 @@ export const heebo = localFont({
   ],
   variable: "--font-heebo",
   display: "swap",
-  preload: false,
+  preload: true,
   fallback: ["system-ui", "sans-serif"],
 });
 
@@ -25,7 +25,7 @@ export const anton = localFont({
   ],
   variable: "--font-anton",
   display: "swap",
-  preload: false,
+  preload: true,
   fallback: ["system-ui", "serif"],
 });
 
@@ -53,7 +53,7 @@ export const notoSansHebrew = localFont({
   ],
   variable: "--font-noto-sans-hebrew",
   display: "swap",
-  preload: false,
+  preload: true,
 });
 
 // Zalando Sans SemiExpanded - English UI font only (Variable Font)

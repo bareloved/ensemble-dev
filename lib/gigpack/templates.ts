@@ -22,7 +22,7 @@ export interface GigPackTemplate {
  */
 function createSection(name: string, songTitles: string[] = []): SetlistSection {
   const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  
+
   return {
     id: generateId(),
     name,
@@ -58,7 +58,6 @@ export const GIGPACK_TEMPLATES: GigPackTemplate[] = [
       paymentNotes: "Typically 50% deposit, remainder on day. Confirm payment schedule.",
       theme: "minimal",
       accentColor: "#F97316",
-      posterSkin: "paper",
       setlistStructured: [
         createSection("Ceremony", []),
         createSection("Cocktail Hour", []),
@@ -82,7 +81,6 @@ export const GIGPACK_TEMPLATES: GigPackTemplate[] = [
       parkingNotes: "Street parking or nearby lot. Load-in through back entrance.",
       theme: "minimal",
       accentColor: "#EF4444",
-      posterSkin: "grain",
       setlistStructured: [
         createSection("Set 1", []),
         createSection("Set 2", []),
@@ -105,7 +103,6 @@ export const GIGPACK_TEMPLATES: GigPackTemplate[] = [
       paymentNotes: "Invoice after event. Net-30 payment terms typical.",
       theme: "minimal",
       accentColor: "#3B82F6",
-      posterSkin: "clean",
       setlistStructured: [
         createSection("Background Set", []),
         createSection("Party Set", []),
@@ -127,7 +124,6 @@ export const GIGPACK_TEMPLATES: GigPackTemplate[] = [
       paymentNotes: "Cash at end of night or Venmo/PayPal.",
       theme: "minimal",
       accentColor: "#F59E0B",
-      posterSkin: "clean",
       setlistStructured: [
         createSection("Set 1", []),
         createSection("Set 2", []),
@@ -150,7 +146,6 @@ export const GIGPACK_TEMPLATES: GigPackTemplate[] = [
       paymentNotes: "Session rate: confirm hourly or flat fee.",
       theme: "minimal",
       accentColor: "#8B5CF6",
-      posterSkin: "clean",
       setlistStructured: [
         createSection("Tracks to Record", []),
         createSection("Overdubs / Extras", []),
@@ -172,7 +167,6 @@ export const GIGPACK_TEMPLATES: GigPackTemplate[] = [
       paymentNotes: "Festival contract payment. Confirm schedule and terms.",
       theme: "minimal",
       accentColor: "#10B981",
-      posterSkin: "grain",
       setlistStructured: [
         createSection("Festival Set", []),
       ],
@@ -209,7 +203,6 @@ export function getEmptyGigPackDefaults() {
     internalNotes: "",
     theme: "minimal" as GigPackTheme,
     accentColor: "",
-    posterSkin: "clean" as PosterSkin,
     bandLogoUrl: "",
     heroImageUrl: "",
   };
@@ -237,7 +230,6 @@ export function applyTemplateToFormDefaults(template: GigPackTemplate) {
     date: calculatedDate,
     theme: defaultValues.theme || baseDefaults.theme,
     accentColor: defaultValues.accentColor || baseDefaults.accentColor,
-    posterSkin: defaultValues.posterSkin || baseDefaults.posterSkin,
     dressCode: defaultValues.dressCode || baseDefaults.dressCode,
     backlineNotes: defaultValues.backlineNotes || baseDefaults.backlineNotes,
     parkingNotes: defaultValues.parkingNotes || baseDefaults.parkingNotes,
