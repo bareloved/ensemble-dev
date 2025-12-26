@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Gig, GigInsert, GigUpdate } from "@/lib/types/shared";
 import { createNotification } from "./notifications";
 
-export async function createGig(data: Omit<GigInsert, "id" | "created_at" | "updated_at">) {
+export async function createGig(data: Omit<GigInsert, "id" | "created_at" | "updated_at" | "owner_id">) {
   const supabase = createClient();
 
   const { data: { user }, error: authError } = await supabase.auth.getUser();

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Clock, AlertCircle, CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { parseScheduleText, createScheduleItems, ParsedScheduleItem, ParsingError } from "@/lib/schedule-parser";
+import { parseScheduleText, createScheduleItems, ParsedScheduleItem, ParsingError } from "@/lib/gigpack/schedule-parser";
 import { GigScheduleItem } from "@/lib/gigpack/types";
 
 interface PasteScheduleDialogProps {
@@ -77,34 +77,34 @@ export function PasteScheduleDialog({
   };
 
   const renderEditStep = () => (
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">
-            {t("pasteScheduleDialogDescription")}
-          </p>
-          <Textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={t("pasteScheduleTextareaPlaceholder")}
-            rows={8}
-            className="text-sm"
-            dir={locale === "he" ? "rtl" : "ltr"}
-          />
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {tCommon("cancel")}
-          </Button>
-          <Button
-            onClick={handleCreateItems}
-            disabled={!text.trim() || isProcessing}
-          >
-            {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {t("createItems")}
-          </Button>
-        </div>
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <p className="text-sm text-muted-foreground">
+          {t("pasteScheduleDialogDescription")}
+        </p>
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={t("pasteScheduleTextareaPlaceholder")}
+          rows={8}
+          className="text-sm"
+          dir={locale === "he" ? "rtl" : "ltr"}
+        />
       </div>
-    );
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={() => onOpenChange(false)}>
+          {tCommon("cancel")}
+        </Button>
+        <Button
+          onClick={handleCreateItems}
+          disabled={!text.trim() || isProcessing}
+        >
+          {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {t("createItems")}
+        </Button>
+      </div>
+    </div>
+  );
 
   const renderPreviewStep = () => {
     const { items, duplicates } = createScheduleItems(parsedItems, existingSchedule);

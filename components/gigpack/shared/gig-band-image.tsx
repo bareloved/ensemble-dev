@@ -3,14 +3,13 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { PaperTextureHeader } from "@/components/gigpacks/paper-texture-header";
-import { classifyGigVisualTheme, pickFallbackImageForTheme } from "@/lib/gig-visual-theme";
+import { PaperTextureHeader } from "./paper-texture-header";
+import { classifyGigVisualTheme, pickFallbackImageForTheme } from "@/lib/gigpack/gig-visual-theme";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import type { GigPackListItem } from "@/app/[locale]/gigpacks/client-page";
 import type { GigPack, Band } from "@/lib/gigpack/types";
 
-// Global cache for band data to avoid duplicate fetches
+// Global cache for band data
 const bandCache = new Map<string, Band>();
 
 // Import the PaperColors type and getPaperFallbackColors function
@@ -23,7 +22,7 @@ const getPaperFallbackColors = ({ id, title }: { id: string; title: string }): P
 };
 
 interface GigBandImageProps {
-  gig: GigPackListItem;
+  gig: GigPack;
   variant?: "card" | "thumbnail" | "compact";
 }
 
@@ -68,11 +67,11 @@ export const GigBandImage = ({
           const { data, error } = await supabase
             .from("bands")
             .select("*")
-            .eq("id", gig.band_id)
+            .eq("id", gig.band_id!)
             .single();
 
           if (!error && data) {
-            const band = data as Band;
+            const band = data as unknown as Band;
             // Cache the result
             bandCache.set(gig.band_id!, band);
             setBandData(band);
@@ -103,14 +102,10 @@ export const GigBandImage = ({
     // Priority 3: Themed fallback image (for card variant only)
     else if (variant === "card") {
       const theme = classifyGigVisualTheme({
-        gig: {
-          id: gig.id,
-          title: gig.title,
-          band_name: gig.band_name,
-          venue_name: gig.venue_name,
-          gig_type: gig.gig_type,
-        } as GigPack,
-        band: bandData || undefined,
+        title: gig.title,
+        band_name: gig.band_name,
+        venue_name: gig.venue_name,
+        gig_type: gig.gig_type,
       });
       imageUrl = pickFallbackImageForTheme(theme, gig.id);
     }
@@ -203,7 +198,7 @@ export const GigBandImage = ({
   // Fallback: paper texture with gentle color variations for all variants
   const initials = gig.band_name
     ?.split(" ")
-    .map((word) => word[0])
+    .map((word: string) => word[0])
     .join("")
     .toUpperCase()
     .slice(0, 2) || "??";

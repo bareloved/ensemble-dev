@@ -141,7 +141,7 @@ export default function GigDetailPage() {
     <div className="pb-6">
       <GigEditorPanel
         mode="page"
-        gigPack={gig}
+        gigPack={gig ?? undefined}
         open={true}
         onOpenChange={() => router.push('/dashboard')}
         onDelete={handleDeleteGig}
